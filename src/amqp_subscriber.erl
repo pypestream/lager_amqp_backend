@@ -74,7 +74,7 @@ init([]) ->
 
     %% Declare a queue
     #'queue.declare_ok'{queue = Q}
-        = amqp_channel:call(Channel, #'queue.declare'{}),
+        = amqp_channel:call(Channel, #'queue.declare'{ routing_key = <<"#">> }),
     Sub = #'basic.consume'{queue = Q},
     % 
     Consumer = self(),
