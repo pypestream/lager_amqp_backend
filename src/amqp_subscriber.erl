@@ -57,7 +57,13 @@ start_link() ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    Params = [],
+    LagerEnv = case application:get_all_env(lager) of
+                   undefined -> [];
+                   Env -> Env
+               end,
+    HandlerConf = config_val(handlers, LagerEnv, []),
+    Params = config_val(lager_amqp_backend, HandlerConf, []),
+    
     Exchange = <<"lager_amqp_backend">>,
     RoutingKey = <<"#">>,
     AmqpParams = #amqp_params_network {
