@@ -59,6 +59,7 @@ start_link() ->
 init([]) ->
     Params = [],
     Exchange = <<"lager_amqp_backend">>,
+    RoutingKey = <<"#">>,
     AmqpParams = #amqp_params_network {
       username       = config_val(amqp_user, Params, <<"guest">>),
       password       = config_val(amqp_pass, Params, <<"guest">>),
@@ -74,10 +75,12 @@ init([]) ->
 
     %% Declare a queue
     #'queue.declare_ok'{queue = Q}
-        = amqp_channel:call(Channel, #'queue.declare'{ routing_key = <<"#">> }),
+        = amqp_channel:call(Channel, #'queue.declare'{}),
+    Binding = #'queue.bind'{queue = Q, exchange = Exchange, routing_key = RoutingKey},
     Sub = #'basic.consume'{queue = Q},
     % 
     Consumer = self(),
+    #'queue.bind_ok'{} = amqp_channel:call(Channel, Binding),
     #'basic.consume_ok'{consumer_tag = Tag} = amqp_channel:subscribe(Channel, Sub, Consumer),
     {ok, #state{}}.
 

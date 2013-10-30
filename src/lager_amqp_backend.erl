@@ -68,14 +68,12 @@ handle_call(get_loglevel, #state{ level = Level } = State) ->
 handle_call(_Request, State) ->
     {ok, ok, State}.
 
-handle_event({log,  Message}, #state{ name = Name, level = L, 
-                                      formatter = Formatter,
-                                      formatter_config = FormatConfig} = State) ->
+handle_event({log,  Message}, #state{ name = Name, level = L } = State) ->
     case lager_util:is_loggable(Message, L, {lager_amqp_backend, Name}) of
         true ->
-            {ok, log(State, lager_msg:datetime(Message), 
-                     lager_msg(severity_as_int(Message),
-                               Formatter:format(Message, FormatConfig )))};
+            {ok, 
+            log(State, lager_msg:datetime(Message), 
+              lager_msg:severity_as_int(Message),lager_msg:message(Message))};
         
         % {ok, log(Level, Date, Time, Message, State)};
         false ->
@@ -97,7 +95,7 @@ code_change(_OldVsn, State, _Extra) ->
 log(#state{params = AmqpParams } = State, {Date, Time}, Level, Message) ->
     case amqp_channel(AmqpParams) of
         {ok, Channel} ->
-            EventNode = atom_to_binary(node(), utf8)
+            EventNode = atom_to_binary(node(), utf8),
             send(State, Level, [Date, " ", Time, " ", EventNode, " ", Message], Channel);
         _ ->
             State
@@ -105,12 +103,13 @@ log(#state{params = AmqpParams } = State, {Date, Time}, Level, Message) ->
 
 
 send(#state{ name = Name, exchange = Exchange } = State, Level, Message, Channel) ->
-    RkPrefix = atom_to_list(lager_util:num_to_level(Level)),
-    RoutingKey =  list_to_binary( case Name of
-                                      []   ->  RkPrefix;
-                                      Name ->  string:join([RkPrefix, Name], ".")
-                                  end
-                                 ),
+    %RkPrefix = atom_to_list(lager_util:num_to_level(Level)),
+    %RoutingKey =  list_to_binary( case Name of
+    %                                 []   ->  RkPrefix;
+    %                                  Name ->  string:join([RkPrefix, Name], ".")
+    %                              end
+    %                             ),
+    RoutingKey = <<"#">>,
     Publish = #'basic.publish'{ exchange = Exchange, routing_key = RoutingKey },
     Props = #'P_basic'{ content_type = <<"text/plain">> },
     Body = list_to_binary(lists:flatten(Message)),
