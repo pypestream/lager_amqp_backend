@@ -155,8 +155,8 @@ maybe_new_pid(Group, StartFun) ->
   
 test() ->
   application:load(lager),
-  application:set_env(lager, handlers, [{lager_console_backend, debug}, {lager_amqp_backend, []}]),
-  application:set_env(lager, error_logger_redirect, false),
+  %%application:set_env(lager, handlers, [{lager_console_backend, debug}, {lager_amqp_backend, []}]),
+  %%application:set_env(lager, error_logger_redirect, false),
   application:start(lager),
   lager:log(info, self(), "Test INFO message"),
   lager:log(debug, self(), "Test DEBUG message"),
