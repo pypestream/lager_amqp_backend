@@ -137,7 +137,9 @@ handle_info(#'basic.cancel_ok'{}, State) ->
     {noreply, State};
 
 handle_info({#'basic.deliver'{delivery_tag = Tag}, Content}, State) ->
-    io:format("> ~p~n", [Content]),
+
+    {_,_,Message} = Content,
+    io:format("> ~ts~n", [Message]),
     {noreply, State};
 
 handle_info(_Info, State) ->
