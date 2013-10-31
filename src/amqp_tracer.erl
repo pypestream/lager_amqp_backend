@@ -20,6 +20,12 @@
          handle_info/2,
          terminate/2,
          code_change/3]).
+-export([trace_amqp/1,
+        trace_amqp/2,
+        stop_trace/1,
+        clear_all_traces/0,
+        run_all_traces/2,
+        run/3]).
 
 -define(SERVER, ?MODULE). 
 
@@ -31,14 +37,25 @@
 trace_amqp(Filter) ->
     trace_amqp(Filter, debug).
 trace_amqp(Filter, Level) ->
-    gen_server:cast(?SERVER, {trace, lager_amqp_backend, Filter, Level}).
+    gen_server:cast(?SERVER, {trace, Filter, Level}).
 
 stop_trace({_Filter, _Level, Target} = Trace) ->
-    gen_server:cast(?SERVER, {stop_trace, Trace}).
+    gen_server:cast(?SERVER, {stop_trace, Target, Trace}).
 
 clear_all_traces() ->
     gen_server:cast(?SERVER, clear_all_traces).
-                           
+
+run_all_traces(Filter,Level) ->
+    Nodes=nodes(),
+    run([Nodes], Filter, Level).
+
+run([H|T],Filter,Level) -> 
+    gen_server:cast({amqp_tracer,H},{trace, Filter, Level}),
+    run(T,Filter,Level);
+
+run([],_Filter,_Level) -> 
+    io:format("run over").
+
 %%--------------------------------------------------------------------
 %% @doc
 %% Starts the server
@@ -95,9 +112,49 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast(_Msg, State) ->
-    {noreply, State}.
+handle_cast({trace, Filter, Level}, State) ->
+    Trace0 = {Filter, Level, lager_amqp_backend},
+    case lager_util:validate_trace(Trace0) of
+        {ok, Trace} ->
+            lager:add_trace_to_loglevel_config(Trace),
+            {ok, Trace};
+        Error ->
+            Error
+    end,
+    {noreply, State};
 
+handle_cast({stop_trace, Target, Trace}, State) ->
+    {Level, Traces} = lager_config:get(loglevel),
+    NewTraces =  lists:delete(Trace, Traces),
+    lager_util:trace_filter([ element(1, T) || T <- NewTraces ]),
+    lager_config:set(loglevel, {Level, NewTraces}),
+    case lager:get_loglevel(Target) of
+        none ->
+            %% check no other traces point here
+            case lists:keyfind(Target, 3, NewTraces) of
+                false ->
+                    gen_event:delete_handler(lager_event, Target, []);
+                _ ->
+                    ok
+            end;
+        _ ->
+            ok
+    end,
+    {noreply, State};
+
+handle_cast({clear_all_traces}, State) ->
+    {Level, _Traces} = lager_config:get(loglevel),
+    lager_util:trace_filter(none),
+    lager_config:set(loglevel, {Level, []}),
+    lists:foreach(fun(Handler) ->
+          case lager:get_loglevel(Handler) of
+            none ->
+              gen_event:delete_handler(lager_event, Handler, []);
+            _ ->
+              ok
+          end
+      end, gen_event:which_handlers(lager_event)),
+    {noreply, State}.
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
