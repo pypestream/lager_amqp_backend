@@ -112,7 +112,7 @@ send(#state{ name = Name, exchange = Exchange } = State, Level, Message, Channel
     RoutingKey = <<"#">>,
     Publish = #'basic.publish'{ exchange = Exchange, routing_key = RoutingKey },
     Props = #'P_basic'{ content_type = <<"text/plain">> },
-    Body = list_to_binary(lists:flatten(Message)),
+    Body = unicode:characters_to_binary(lists:flatten(Message)),
     Msg = #amqp_msg{ payload = Body, props = Props },
     
     % io:format("message: ~p~n", [Msg]),
