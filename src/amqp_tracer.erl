@@ -20,18 +20,13 @@
          handle_info/2,
          terminate/2,
          code_change/3]).
--export([trace_amqp/1,
-        trace_amqp/2,
-        stop_trace/1,
-        clear_all_traces/0,
-        run_all_traces/2,
-        run/3]).
 
--export([distributed_trace/2,
+-export([distributed_trace/3,
          trace_amqp/2,
          trace_amqp/3,
          stop_trace/1,
-         clear_all_traces/0])
+         clear_all_traces/0]).
+
 -define(SERVER, ?MODULE). 
 
 -record(state, {}).
@@ -39,7 +34,7 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
-distributed_trace(Channel, Filter) ->
+distributed_trace(Channel, Filter, Level) ->
     lists:foreach(fun(Node) ->
                           gen_server:cast({?SERVER, Node}, {trace, lager_amqp_backend, Filter, Level})
                   end, nodes()).
