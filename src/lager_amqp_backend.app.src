@@ -15,7 +15,6 @@
          {amqp_pass,      <<"guest">>},
          {amqp_vhost,     <<"/">>},
          {amqp_host,      "localhost"},
-         {amqp_port,      5672},
-         {trace_vhost,    <<"/trace">>}
+         {amqp_port,      5672}
         ]}
 ]}.
