@@ -109,14 +109,15 @@ handle_call(_Request, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({trace, Filter, Level}, State) ->
-    Trace0 = {Filter, Level, lager_amqp_backend},
-    case lager_util:validate_trace(Trace0) of
-        {ok, Trace} ->
-            lager:add_trace_to_loglevel_config(Trace),
-            {ok, Trace};
-        Error ->
-            Error
-    end,
+%    Trace0 = {Filter, Level, lager_amqp_backend},
+%    case lager_util:validate_trace(Trace0) of
+%        {ok, Trace} ->
+%            lager:add_trace_to_loglevel_config(Trace),
+%            {ok, Trace};
+%        Error ->
+%            Error
+ %   end,
+     lager:trace(lager_amqp_backend, Filter, Level),
     {noreply, State};
 
 handle_cast({stop_trace, Target, Trace}, State) ->
