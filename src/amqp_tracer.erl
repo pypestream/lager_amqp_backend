@@ -20,18 +20,13 @@
          handle_info/2,
          terminate/2,
          code_change/3]).
--export([trace_amqp/1,
-        trace_amqp/2,
-        stop_trace/1,
-        clear_all_traces/0,
-        run_all_traces/2,
-        run/3]).
 
--export([distributed_trace/2,
+-export([distributed_trace/3,
          trace_amqp/2,
          trace_amqp/3,
          stop_trace/1,
-         clear_all_traces/0])
+         clear_all_traces/0]).
+
 -define(SERVER, ?MODULE). 
 
 -record(state, {}).
@@ -39,7 +34,7 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
-distributed_trace(RoutingKey, Filter) ->
+distributed_trace(RoutingKey, Filter, Level) ->
     lists:foreach(fun(Node) ->
                           gen_server:cast({?SERVER, Node}, {trace, lager_amqp_backend, Filter, Level})
                   end, nodes()).
@@ -137,14 +132,15 @@ handle_call(_Request, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({trace, Filter, Level}, State) ->
-    Trace0 = {Filter, Level, lager_amqp_backend},
-    case lager_util:validate_trace(Trace0) of
-        {ok, Trace} ->
-            lager:add_trace_to_loglevel_config(Trace),
-            {ok, Trace};
-        Error ->
-            Error
-    end,
+%    Trace0 = {Filter, Level, lager_amqp_backend},
+%    case lager_util:validate_trace(Trace0) of
+%        {ok, Trace} ->
+%            lager:add_trace_to_loglevel_config(Trace),
+%            {ok, Trace};
+%        Error ->
+%            Error
+ %   end,
+     lager:trace(lager_amqp_backend, Filter, Level),
     {noreply, State};
 
 handle_cast({stop_trace, Target, Trace}, State) ->
