@@ -40,10 +40,10 @@ distributed_trace(Channel, Filter, Level) ->
                   end, nodes()).
 
 trace_amqp(Channel, Filter) ->
-    trace_amqp(Filter, debug).
+    trace_amqp(Channel, Filter, debug).
 
 trace_amqp(Channel, Filter, Level) ->
-    gen_server:cast(?SERVER, {trace, lager_amqp_backend, Filter, Level}).
+    gen_server:cast(?SERVER, {trace, Filter, Level}).
 
 stop_trace({_Filter, _Level, Target} = Trace) ->
     gen_server:cast(?SERVER, {stop_trace, Target, Trace}).
