@@ -50,15 +50,16 @@ trace_amqp(RoutingKey, Filter, Level) ->
             %% check if this file backend is already installed
             Res = case lists:member({lager_amqp_backend, RoutingKey}, Handlers) of
                 false ->
-                    %% install the handler
+                    %% install the handler ,https://github.com/basho/lager/issues/65
                     supervisor:start_child(lager_handler_watcher_sup,
-                        [lager_event, {lager_amqp_backend, RoutingKey}]);
+                        [lager_event, lager_amqp_backend, {"lager_amqp_backend", debug, <<"lager_amqp_backend">>,    
+                       <<"guest">>, <<"guest">>, <<"/">>, "lknode55x.lk.com", RoutingKey, 5672}]);
                 _ ->
                     {ok, exists}
             end,
             case Res of
               {ok, _} ->
-                add_trace_to_loglevel_config(Trace),
+                lager:add_trace_to_loglevel_config(Trace),
                 {ok, Trace};
               {error, _} = E ->
                 E

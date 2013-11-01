@@ -11,7 +11,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0]).
+-export([start_link/1]).
 
 %% gen_server callbacks
 -export([init/1, 
@@ -38,8 +38,8 @@
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link(Channel) ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [Channel], []).
+start_link(TraceRK) ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [TraceRK], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -56,7 +56,7 @@ start_link(Channel) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([ChannelVHost]) ->
+init([TraceRK]) ->
     LagerEnv = case application:get_all_env(lager) of
                    undefined -> [];
                    Env -> Env
@@ -65,11 +65,11 @@ init([ChannelVHost]) ->
     Params = config_val(lager_amqp_backend, HandlerConf, []),
     
     Exchange = <<"lager_amqp_backend">>,
-    RoutingKey = <<"#">>,
+    RoutingKey = TraceRK,
     AmqpParams = #amqp_params_network {
       username       = config_val(amqp_user, Params, <<"guest">>),
       password       = config_val(amqp_pass, Params, <<"guest">>),
-      virtual_host   = ChannelVHost
+      virtual_host   = config_val(amqp_vhost, Params, <<"/">>),
       host           = config_val(amqp_host, Params, "localhost"),
       port           = config_val(amqp_port, Params, 5672)
      },

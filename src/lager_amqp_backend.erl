@@ -35,7 +35,12 @@
                 trace_rk
                }).
 
-
+init({Name, Level, Exchange, Username, Password, Vhost, Host, TraceRK, Port}) 
+  when is_list(Name), is_atom(Level) ->
+    %% backwards compatability hack
+    init([{name, Name}, {level, Level}, {exchang, Exchange}, {amqp_user, Username}, {amqp_pass, Password}, 
+      {amqp_vhost, Vhost}, {amqp_host, Host}, {trace_rk, TraceRK}, {amqp_port, Port}]);
+    
 init(Params) ->
   
     Name  = config_val(name, Params, ?MODULE),  
