@@ -27,6 +27,11 @@
         run_all_traces/2,
         run/3]).
 
+-export([distributed_trace/2,
+         trace_amqp/2,
+         trace_amqp/3,
+         stop_trace/1,
+         clear_all_traces/0])
 -define(SERVER, ?MODULE). 
 
 -record(state, {}).
@@ -34,10 +39,16 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
-trace_amqp(Filter) ->
+distributed_trace(Channel, Filter) ->
+    lists:foreach(fun(Node) ->
+                          gen_server:cast({?SERVER, Node}, {trace, lager_amqp_backend, Filter, Level})
+                  end, nodes()).
+
+trace_amqp(Channel, Filter) ->
     trace_amqp(Filter, debug).
-trace_amqp(Filter, Level) ->
-    gen_server:cast(?SERVER, {trace, Filter, Level}).
+
+trace_amqp(Channel, Filter, Level) ->
+    gen_server:cast(?SERVER, {trace, lager_amqp_backend, Filter, Level}).
 
 stop_trace({_Filter, _Level, Target} = Trace) ->
     gen_server:cast(?SERVER, {stop_trace, Target, Trace}).
@@ -45,16 +56,6 @@ stop_trace({_Filter, _Level, Target} = Trace) ->
 clear_all_traces() ->
     gen_server:cast(?SERVER, clear_all_traces).
 
-run_all_traces(Filter,Level) ->
-    Nodes=nodes(),
-    run([Nodes], Filter, Level).
-
-run([H|T],Filter,Level) -> 
-    gen_server:cast({amqp_tracer,H},{trace, Filter, Level}),
-    run(T,Filter,Level);
-
-run([],_Filter,_Level) -> 
-    io:format("run over").
 
 %%--------------------------------------------------------------------
 %% @doc
