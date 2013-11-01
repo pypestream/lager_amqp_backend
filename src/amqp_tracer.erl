@@ -39,16 +39,39 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
-distributed_trace(Channel, Filter) ->
+distributed_trace(RoutingKey, Filter) ->
     lists:foreach(fun(Node) ->
                           gen_server:cast({?SERVER, Node}, {trace, lager_amqp_backend, Filter, Level})
                   end, nodes()).
 
-trace_amqp(Channel, Filter) ->
-    trace_amqp(Filter, debug).
+trace_amqp(RoutingKey, Filter) ->
+    trace_amqp(RoutingKey, Filter, debug).
 
-trace_amqp(Channel, Filter, Level) ->
-    gen_server:cast(?SERVER, {trace, lager_amqp_backend, Filter, Level}).
+trace_amqp(RoutingKey, Filter, Level) ->
+    Trace0 = { Filter, Level, {lager_amqp_backend, RoutingKey} },
+    case lager_util:validate_trace(Trace0) of
+        {ok, Trace} ->
+            Handlers = gen_event:which_handlers(lager_event),
+            %% check if this file backend is already installed
+            Res = case lists:member({lager_amqp_backend, RoutingKey}, Handlers) of
+                false ->
+                    %% install the handler
+                    supervisor:start_child(lager_handler_watcher_sup,
+                        [lager_event, {lager_amqp_backend, RoutingKey}]);
+                _ ->
+                    {ok, exists}
+            end,
+            case Res of
+              {ok, _} ->
+                add_trace_to_loglevel_config(Trace),
+                {ok, Trace};
+              {error, _} = E ->
+                E
+            end;
+        Error ->
+            Error
+    
+    end.
 
 stop_trace({_Filter, _Level, Target} = Trace) ->
     gen_server:cast(?SERVER, {stop_trace, Target, Trace}).

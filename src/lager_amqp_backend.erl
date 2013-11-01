@@ -31,15 +31,18 @@
 -record(state, {name,
                 level,
                 exchange,
-                params
+                params,
+                trace_rk
                }).
+
 
 init(Params) ->
   
-    Name = config_val(name, Params, ?MODULE),  
+    Name  = config_val(name, Params, ?MODULE),  
     Level = config_val(level, Params, debug),
     Exchange = config_val(exchange, Params, list_to_binary(atom_to_list(?MODULE))),
-    
+    TraceRK  = config_val(trace_rk, Params, undefined),
+
     AmqpParams = #amqp_params_network {
       username       = config_val(amqp_user, Params, <<"guest">>),
       password       = config_val(amqp_pass, Params, <<"guest">>),
@@ -52,7 +55,8 @@ init(Params) ->
     #'exchange.declare_ok'{} = amqp_channel:call(Channel, #'exchange.declare'{ exchange = Exchange, 
                                                                                type = <<"topic">> }),
   
-    {ok, #state{ name = Name, 
+    {ok, #state{ name  = Name,
+                 trace_rk = TraceRK,
                  level = Level, 
                  exchange = Exchange,
                  params = AmqpParams
@@ -73,9 +77,8 @@ handle_event({log,  Message}, #state{ name = Name, level = L } = State) ->
         true ->
             {ok, 
             log(State, lager_msg:datetime(Message), 
-              lager_msg:severity_as_int(Message),lager_msg:message(Message))};
-        
-        % {ok, log(Level, Date, Time, Message, State)};
+                lager_msg:severity_as_int(Message),
+                lager_msg:message(Message))};
         false ->
             {ok, State}
     end;
@@ -95,21 +98,19 @@ code_change(_OldVsn, State, _Extra) ->
 log(#state{params = AmqpParams } = State, {Date, Time}, Level, Message) ->
     case amqp_channel(AmqpParams) of
         {ok, Channel} ->
-            EventNode = atom_to_binary(node(), utf8),
-            send(State, Level, [Date, " ", Time, " ", EventNode, " ", Message], Channel);
+            Node = atom_to_list(node()),
+            send(State, Node, Level, [Date, " ", Time, " ", Node, " ", Message], Channel);
         _ ->
             State
     end.    
 
 
-send(#state{ name = Name, exchange = Exchange } = State, Level, Message, Channel) ->
-    %RkPrefix = atom_to_list(lager_util:num_to_level(Level)),
-    %RoutingKey =  list_to_binary( case Name of
-    %                                 []   ->  RkPrefix;
-    %                                  Name ->  string:join([RkPrefix, Name], ".")
-    %                              end
-    %                             ),
-    RoutingKey = <<"#">>,
+send(#state{ name = Name, exchange = Exchange, trace_rk = TraceRK } = State, Node, Level, Message, Channel) ->
+    
+    RoutingKey = case TraceRK of
+                     undefined -> routing_key(Node, Name, Level);
+                     _ -> list_to_binary(TraceRK)
+                 end,
     Publish = #'basic.publish'{ exchange = Exchange, routing_key = RoutingKey },
     Props = #'P_basic'{ content_type = <<"text/plain">> },
     Body = unicode:characters_to_binary(lists:flatten(Message)),
@@ -119,6 +120,14 @@ send(#state{ name = Name, exchange = Exchange } = State, Level, Message, Channel
     amqp_channel:cast(Channel, Publish, Msg),
     
     State.
+
+routing_key(Node, Name, Level) ->
+    RkPrefix = atom_to_list(lager_util:num_to_level(Level)),
+    RoutingKey =  case Name of
+                      []   ->  string:join([Node, RkPrefix], ".");
+                      Name ->  string:join([Node, Name, RkPrefix], ".")
+                  end,
+    list_to_binary(RoutingKey).
 
 config_val(C, Params, Default) ->
     case lists:keyfind(C, 1, Params) of

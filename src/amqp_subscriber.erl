@@ -38,8 +38,8 @@
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+start_link(Channel) ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [Channel], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -56,7 +56,7 @@ start_link() ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([]) ->
+init([ChannelVHost]) ->
     LagerEnv = case application:get_all_env(lager) of
                    undefined -> [];
                    Env -> Env
@@ -69,7 +69,7 @@ init([]) ->
     AmqpParams = #amqp_params_network {
       username       = config_val(amqp_user, Params, <<"guest">>),
       password       = config_val(amqp_pass, Params, <<"guest">>),
-      virtual_host   = config_val(amqp_vhost, Params, <<"/">>),
+      virtual_host   = ChannelVHost
       host           = config_val(amqp_host, Params, "localhost"),
       port           = config_val(amqp_port, Params, 5672)
      },
