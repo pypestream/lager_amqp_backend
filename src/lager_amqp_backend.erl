@@ -114,7 +114,7 @@ send(#state{ name = Name, exchange = Exchange, trace_rk = TraceRK } = State, Nod
     
     RoutingKey = case TraceRK of
                      undefined -> routing_key(Node, Name, Level);
-                     _ -> list_to_binary(TraceRK)
+                     _ -> TraceRK
                  end,
     Publish = #'basic.publish'{ exchange = Exchange, routing_key = RoutingKey },
     Props = #'P_basic'{ content_type = <<"text/plain">> },
