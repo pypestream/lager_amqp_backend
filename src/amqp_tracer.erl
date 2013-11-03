@@ -52,7 +52,7 @@ trace_amqp(RoutingKey, Filter, Level) ->
                 false ->
                     %% install the handler ,https://github.com/basho/lager/issues/65
                     supervisor:start_child(lager_handler_watcher_sup,
-                        [lager_event, lager_amqp_backend, {"lager_amqp_backend", debug, <<"lager_amqp_backend">>,    
+                        [lager_event, {lager_amqp_backend, RoutingKey}, {"lager_amqp_backend", none, <<"lager_amqp_backend">>,    
                        <<"guest">>, <<"guest">>, <<"/">>, "lknode55x.lk.com", RoutingKey, 5672}]);
                 _ ->
                     {ok, exists}

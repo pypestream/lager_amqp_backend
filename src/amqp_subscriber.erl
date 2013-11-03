@@ -83,10 +83,10 @@ init([TraceRK]) ->
     #'queue.declare_ok'{queue = Q}
         = amqp_channel:call(Channel, #'queue.declare'{}),
     Binding = #'queue.bind'{queue = Q, exchange = Exchange, routing_key = RoutingKey},
+     #'queue.bind_ok'{} = amqp_channel:call(Channel, Binding),
     Sub = #'basic.consume'{queue = Q},
     % 
     Consumer = self(),
-    #'queue.bind_ok'{} = amqp_channel:call(Channel, Binding),
     #'basic.consume_ok'{consumer_tag = Tag} = amqp_channel:subscribe(Channel, Sub, Consumer),
     {ok, #state{}}.
 

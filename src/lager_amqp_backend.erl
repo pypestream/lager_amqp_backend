@@ -44,7 +44,7 @@ init({Name, Level, Exchange, Username, Password, Vhost, Host, TraceRK, Port})
 init(Params) ->
   
     Name  = config_val(name, Params, ?MODULE),  
-    Level = config_val(level, Params, debug),
+    Level = lager_util:level_to_num(config_val(level, Params, debug)),
     Exchange = config_val(exchange, Params, list_to_binary(atom_to_list(?MODULE))),
     TraceRK  = config_val(trace_rk, Params, undefined),
 
@@ -77,8 +77,8 @@ handle_call(get_loglevel, #state{ level = Level } = State) ->
 handle_call(_Request, State) ->
     {ok, ok, State}.
 
-handle_event({log,  Message}, #state{ name = Name, level = L } = State) ->
-    case lager_util:is_loggable(Message, L, {lager_amqp_backend, Name}) of
+handle_event({log,  Message}, #state{ name = Name, trace_rk = TraceRK, level = L } = State) ->
+    case lager_util:is_loggable(Message, L, {lager_amqp_backend, TraceRK}) of
         true ->
             {ok, 
             log(State, lager_msg:datetime(Message), 
