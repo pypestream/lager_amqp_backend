@@ -36,7 +36,7 @@
 %%%===================================================================
 distributed_trace(RoutingKey, Filter, Level) ->
     lists:foreach(fun(Node) ->
-                          gen_server:cast({?SERVER, Node}, {trace, lager_amqp_backend, Filter, Level})
+                          gen_server:cast({?SERVER, Node}, {trace, RoutingKey, Filter, Level})
                   end, nodes()).
 
 trace_amqp(RoutingKey, Filter) ->
@@ -132,16 +132,31 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast({trace, Filter, Level}, State) ->
-%    Trace0 = {Filter, Level, lager_amqp_backend},
-%    case lager_util:validate_trace(Trace0) of
-%        {ok, Trace} ->
-%            lager:add_trace_to_loglevel_config(Trace),
-%            {ok, Trace};
-%        Error ->
-%            Error
- %   end,
-     lager:trace(lager_amqp_backend, Filter, Level),
+handle_cast({trace, RoutingKey, Filter, Level}, State) ->
+    Trace0 = { Filter, Level, {lager_amqp_backend, RoutingKey} },
+    case lager_util:validate_trace(Trace0) of
+        {ok, Trace} ->
+            Handlers = gen_event:which_handlers(lager_event),
+            %% check if this file backend is already installed
+            Res = case lists:member({lager_amqp_backend, RoutingKey}, Handlers) of
+                false ->
+                    %% install the handler ,https://github.com/basho/lager/issues/65
+                    supervisor:start_child(lager_handler_watcher_sup,
+                        [lager_event, {lager_amqp_backend, RoutingKey}, {"lager_amqp_backend", none, <<"lager_amqp_backend">>,    
+                       <<"guest">>, <<"guest">>, <<"/">>, "lknode55x.lk.com", RoutingKey, 5672}]);
+                _ ->
+                    {ok, exists}
+            end,
+            case Res of
+              {ok, _} ->
+                lager:add_trace_to_loglevel_config(Trace),
+                {ok, Trace};
+              {error, _} = E ->
+                E
+            end;
+        Error ->
+            Error
+    end,
     {noreply, State};
 
 handle_cast({stop_trace, Target, Trace}, State) ->
