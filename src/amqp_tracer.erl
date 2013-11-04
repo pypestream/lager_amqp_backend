@@ -59,7 +59,7 @@ trace_amqp(RoutingKey, Filter, Level) ->
             end,
             case Res of
               {ok, _} ->
-                lager:add_trace_to_loglevel_config(Trace),
+                add_trace_to_loglevel_config(Trace),
                 {ok, Trace};
               {error, _} = E ->
                 E
@@ -149,7 +149,7 @@ handle_cast({trace, RoutingKey, Filter, Level}, State) ->
             end,
             case Res of
               {ok, _} ->
-                lager:add_trace_to_loglevel_config(Trace),
+                add_trace_to_loglevel_config(Trace),
                 {ok, Trace};
               {error, _} = E ->
                 E
@@ -232,3 +232,13 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+add_trace_to_loglevel_config(Trace) ->
+    {MinLevel, Traces} = lager_config:get(loglevel),
+    case lists:member(Trace, Traces) of
+        false ->
+            NewTraces = [Trace|Traces],
+            lager_util:trace_filter([ element(1, T) || T <- NewTraces]),
+            lager_config:set(loglevel, {MinLevel, [Trace|Traces]});
+        _ ->
+            ok
+    end.
