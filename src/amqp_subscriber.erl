@@ -38,8 +38,9 @@
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link(TraceRK) ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [TraceRK], []).
+start_link(RoutingKey) when ->
+    ServerName = list_to_atom(RoutingKey)
+    gen_server:start_link({local, ServerName}, ?MODULE, [RoutingKey], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -56,7 +57,7 @@ start_link(TraceRK) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([TraceRK]) ->
+init([RoutingKey]) ->
     LagerEnv = case application:get_all_env(lager) of
                    undefined -> [];
                    Env -> Env
@@ -64,8 +65,7 @@ init([TraceRK]) ->
     HandlerConf = config_val(handlers, LagerEnv, []),
     Params = config_val(lager_amqp_backend, HandlerConf, []),
     
-    Exchange = <<"lager_amqp_backend">>,
-    RoutingKey = TraceRK,
+    Exchange = config_val(exchange, Params, <<"lager_amqp_backend">>),
     AmqpParams = #amqp_params_network {
       username       = config_val(amqp_user, Params, <<"guest">>),
       password       = config_val(amqp_pass, Params, <<"guest">>),
@@ -80,8 +80,7 @@ init([TraceRK]) ->
                                                                                type = <<"topic">> }),
 
     %% Declare a queue
-    #'queue.declare_ok'{queue = Q}
-        = amqp_channel:call(Channel, #'queue.declare'{}),
+    #'queue.declare_ok'{queue = Q} = amqp_channel:call(Channel, #'queue.declare'{}),
     Binding = #'queue.bind'{queue = Q, exchange = Exchange, routing_key = RoutingKey},
      #'queue.bind_ok'{} = amqp_channel:call(Channel, Binding),
     Sub = #'basic.consume'{queue = Q},
@@ -136,9 +135,8 @@ handle_info(#'basic.consume_ok'{}, State) ->
 handle_info(#'basic.cancel_ok'{}, State) ->
     {noreply, State};
 
-handle_info({#'basic.deliver'{delivery_tag = Tag}, Content}, State) ->
+handle_info({#'basic.deliver'{delivery_tag = Tag}, {_, _, Message} = Content}, State) ->
 
-    {_,_,Message} = Content,
     io:format("> ~ts~n", [Message]),
     {noreply, State};
 
