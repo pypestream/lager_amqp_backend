@@ -215,4 +215,3 @@ add_trace_to_loglevel_config(Trace) ->
         _ ->
             ok
     end.
-
