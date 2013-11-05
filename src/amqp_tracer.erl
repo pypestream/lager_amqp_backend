@@ -44,6 +44,22 @@ trace_amqp(RoutingKey, Filter) ->
 
 trace_amqp(RoutingKey, Filter, Level) ->
     Trace0 = { Filter, Level, {lager_amqp_backend, RoutingKey} },
+%% get params from config
+    LagerEnv = case application:get_all_env(lager) of
+                   undefined -> [];
+                   Env -> Env
+               end,
+    HandlerConf = config_val(handlers, LagerEnv, []),
+    Params = config_val(lager_amqp_backend, HandlerConf, []),
+
+    Name      = config_val(name, Params, <<"lager_amqp_backend">>),
+    Exchange = config_val(exchange, Params, <<"lager_amqp_backend">>),
+    UserName       = config_val(amqp_user, Params, <<"guest">>),
+    PassWord       = config_val(amqp_pass, Params, <<"guest">>),
+    Vhost   = config_val(amqp_vhost, Params, <<"/">>),
+    Host           = config_val(amqp_host, Params, "localhost"),
+    Port           = config_val(amqp_port, Params, 5672),
+%%----------------------------------------------------------------------
     case lager_util:validate_trace(Trace0) of
         {ok, Trace} ->
             Handlers = gen_event:which_handlers(lager_event),
@@ -52,8 +68,8 @@ trace_amqp(RoutingKey, Filter, Level) ->
                 false ->
                     %% install the handler ,https://github.com/basho/lager/issues/65
                     supervisor:start_child(lager_handler_watcher_sup,
-                        [lager_event, {lager_amqp_backend, RoutingKey}, {"lager_amqp_backend", none, <<"lager_amqp_backend">>,    
-                       <<"guest">>, <<"guest">>, <<"/">>, "lknode55x.lk.com", RoutingKey, 5672}]);
+                        [lager_event, {lager_amqp_backend, RoutingKey}, {Name, none, Exchange,    
+                       UserName, PassWord, Vhost, Host, RoutingKey, Port}]);
                 _ ->
                     {ok, exists}
             end,
@@ -134,6 +150,22 @@ handle_call(_Request, _From, State) ->
 %%--------------------------------------------------------------------
 handle_cast({trace, RoutingKey, Filter, Level}, State) ->
     Trace0 = { Filter, Level, {lager_amqp_backend, RoutingKey} },
+%% get params from config
+    LagerEnv = case application:get_all_env(lager) of
+                   undefined -> [];
+                   Env -> Env
+               end,
+    HandlerConf = config_val(handlers, LagerEnv, []),
+    Params = config_val(lager_amqp_backend, HandlerConf, []),
+
+    Name      = config_val(name, Params, <<"lager_amqp_backend">>),
+    Exchange = config_val(exchange, Params, <<"lager_amqp_backend">>),
+    UserName       = config_val(amqp_user, Params, <<"guest">>),
+    PassWord       = config_val(amqp_pass, Params, <<"guest">>),
+    Vhost   = config_val(amqp_vhost, Params, <<"/">>),
+    Host           = config_val(amqp_host, Params, "localhost"),
+    Port           = config_val(amqp_port, Params, 5672),
+%%----------------------------------------------------------------------
     case lager_util:validate_trace(Trace0) of
         {ok, Trace} ->
             Handlers = gen_event:which_handlers(lager_event),
@@ -142,8 +174,8 @@ handle_cast({trace, RoutingKey, Filter, Level}, State) ->
                 false ->
                     %% install the handler ,https://github.com/basho/lager/issues/65
                     supervisor:start_child(lager_handler_watcher_sup,
-                        [lager_event, {lager_amqp_backend, RoutingKey}, {"lager_amqp_backend", none, <<"lager_amqp_backend">>,    
-                       <<"guest">>, <<"guest">>, <<"/">>, "lknode55x.lk.com", RoutingKey, 5672}]);
+                        [lager_event, {lager_amqp_backend, RoutingKey}, {Name, none, Exchange,    
+                       UserName, PassWord, Vhost, Host, RoutingKey, Port}]);
                 _ ->
                     {ok, exists}
             end,
@@ -156,6 +188,7 @@ handle_cast({trace, RoutingKey, Filter, Level}, State) ->
             end;
         Error ->
             Error
+    
     end,
     {noreply, State};
 
@@ -242,3 +275,8 @@ add_trace_to_loglevel_config(Trace) ->
         _ ->
             ok
     end.
+config_val(C, Params, Default) ->
+  case lists:keyfind(C, 1, Params) of
+    {C, V} -> V;
+    _ -> Default
+  end.
