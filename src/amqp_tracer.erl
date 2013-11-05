@@ -21,11 +21,13 @@
          terminate/2,
          code_change/3]).
 
--export([distributed_trace/3,
-         trace_amqp/2,
+-export([trace_amqp/2,
          trace_amqp/3,
+         trace_amqp/4,
          stop_trace/1,
-         clear_all_traces/0]).
+         stop_trace/2,
+         clear_all_traces/0,
+         clear_all_traces/1]).
 
 -define(SERVER, ?MODULE). 
 
@@ -34,48 +36,39 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
-distributed_trace(RoutingKey, Filter, Level) ->
-    lists:foreach(fun(Node) ->
-                          gen_server:cast({?SERVER, Node}, {trace, RoutingKey, Filter, Level})
-                  end, nodes()).
 
 trace_amqp(RoutingKey, Filter) ->
     trace_amqp(RoutingKey, Filter, debug).
 
 trace_amqp(RoutingKey, Filter, Level) ->
-    Trace0 = { Filter, Level, {lager_amqp_backend, RoutingKey} },
-    case lager_util:validate_trace(Trace0) of
-        {ok, Trace} ->
-            Handlers = gen_event:which_handlers(lager_event),
-            %% check if this file backend is already installed
-            Res = case lists:member({lager_amqp_backend, RoutingKey}, Handlers) of
-                false ->
-                    %% install the handler ,https://github.com/basho/lager/issues/65
-                    supervisor:start_child(lager_handler_watcher_sup,
-                        [lager_event, {lager_amqp_backend, RoutingKey}, {"lager_amqp_backend", none, <<"lager_amqp_backend">>,    
-                       <<"guest">>, <<"guest">>, <<"/">>, "lknode55x.lk.com", RoutingKey, 5672}]);
-                _ ->
-                    {ok, exists}
-            end,
-            case Res of
-              {ok, _} ->
-                add_trace_to_loglevel_config(Trace),
-                {ok, Trace};
-              {error, _} = E ->
-                E
-            end;
-        Error ->
-            Error
-    
-    end.
+    gen_server:cast(?SERVER, {trace, RoutingKey, Filter, Level}).
 
-stop_trace({_Filter, _Level, Target} = Trace) ->
-    gen_server:cast(?SERVER, {stop_trace, Target, Trace}).
+trace_amqp(distributed, RoutingKey, Filter, Level) ->
+    lists:foreach(
+      fun(Node) ->
+              gen_server:cast({?SERVER, Node}, {trace, RoutingKey, Filter, Level})
+      end, nodes()).
+
+
+stop_trace({_Filter, _Level, _Target} = Trace) ->
+    gen_server:cast(?SERVER, {stop_trace, Trace}).
+
+stop_trace(distributed, {_, _, _} = Trace) ->
+    lists:foreach(
+      fun(Node) ->
+              gen_server:cast({?SERVER, Node}, {stop_trace, Trace})
+      end, nodes()).
+
 
 clear_all_traces() ->
     gen_server:cast(?SERVER, clear_all_traces).
 
-
+clear_all_traces(distributed) ->
+    lists:foreach(
+      fun(Node) ->
+              gen_server:cast({?SERVER, Node}, clear_all_traces)
+      end, nodes()).
+    
 %%--------------------------------------------------------------------
 %% @doc
 %% Starts the server
@@ -133,63 +126,15 @@ handle_call(_Request, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({trace, RoutingKey, Filter, Level}, State) ->
-    Trace0 = { Filter, Level, {lager_amqp_backend, RoutingKey} },
-    case lager_util:validate_trace(Trace0) of
-        {ok, Trace} ->
-            Handlers = gen_event:which_handlers(lager_event),
-            %% check if this file backend is already installed
-            Res = case lists:member({lager_amqp_backend, RoutingKey}, Handlers) of
-                false ->
-                    %% install the handler ,https://github.com/basho/lager/issues/65
-                    supervisor:start_child(lager_handler_watcher_sup,
-                        [lager_event, {lager_amqp_backend, RoutingKey}, {"lager_amqp_backend", none, <<"lager_amqp_backend">>,    
-                       <<"guest">>, <<"guest">>, <<"/">>, "lknode55x.lk.com", RoutingKey, 5672}]);
-                _ ->
-                    {ok, exists}
-            end,
-            case Res of
-              {ok, _} ->
-                add_trace_to_loglevel_config(Trace),
-                {ok, Trace};
-              {error, _} = E ->
-                E
-            end;
-        Error ->
-            Error
-    end,
+    do_trace_amqp(RoutingKey, Filter, Level),
     {noreply, State};
 
-handle_cast({stop_trace, Target, Trace}, State) ->
-    {Level, Traces} = lager_config:get(loglevel),
-    NewTraces =  lists:delete(Trace, Traces),
-    lager_util:trace_filter([ element(1, T) || T <- NewTraces ]),
-    lager_config:set(loglevel, {Level, NewTraces}),
-    case lager:get_loglevel(Target) of
-        none ->
-            %% check no other traces point here
-            case lists:keyfind(Target, 3, NewTraces) of
-                false ->
-                    gen_event:delete_handler(lager_event, Target, []);
-                _ ->
-                    ok
-            end;
-        _ ->
-            ok
-    end,
+handle_cast({stop_trace, Trace}, State) ->
+    lager:stop_trace(Trace),
     {noreply, State};
 
-handle_cast({clear_all_traces}, State) ->
-    {Level, _Traces} = lager_config:get(loglevel),
-    lager_util:trace_filter(none),
-    lager_config:set(loglevel, {Level, []}),
-    lists:foreach(fun(Handler) ->
-          case lager:get_loglevel(Handler) of
-            none ->
-              gen_event:delete_handler(lager_event, Handler, []);
-            _ ->
-              ok
-          end
-      end, gen_event:which_handlers(lager_event)),
+handle_cast(clear_all_traces, State) ->
+    lager:clear_all_traces(),
     {noreply, State}.
 %%--------------------------------------------------------------------
 %% @private
@@ -232,6 +177,34 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+do_trace_amqp(RoutingKey, Filter, Level) ->
+    Trace0 = { Filter, Level, {lager_amqp_backend, RoutingKey} },
+    case lager_util:validate_trace(Trace0) of
+        {ok, Trace} ->
+            Handlers = gen_event:which_handlers(lager_event),
+            %% check if this file backend is already installed
+            Res = case lists:member({lager_amqp_backend, RoutingKey}, Handlers) of
+                false ->
+                    %% install the handler, https://github.com/basho/lager/issues/65
+                    supervisor:start_child(lager_handler_watcher_sup,
+                        [lager_event, {lager_amqp_backend, RoutingKey},
+                                      {RoutingKey, none} ]);
+                _ ->
+                    {ok, exists}
+            end,
+            case Res of
+              {ok, _} ->
+                add_trace_to_loglevel_config(Trace),
+                {ok, Trace};
+              {error, _} = E ->
+                E
+            end;
+        Error ->
+            Error
+    
+    end.
+
 add_trace_to_loglevel_config(Trace) ->
     {MinLevel, Traces} = lager_config:get(loglevel),
     case lists:member(Trace, Traces) of
@@ -242,3 +215,4 @@ add_trace_to_loglevel_config(Trace) ->
         _ ->
             ok
     end.
+

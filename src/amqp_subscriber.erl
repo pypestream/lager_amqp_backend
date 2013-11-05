@@ -38,9 +38,12 @@
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link(RoutingKey) when ->
-    ServerName = list_to_atom(RoutingKey)
-    gen_server:start_link({local, ServerName}, ?MODULE, [RoutingKey], []).
+start_link(RoutingKey) when is_list(RoutingKey) ->
+    ServerName = list_to_atom(RoutingKey),
+    gen_server:start_link({local, ServerName}, ?MODULE, [RoutingKey], []);
+
+start_link(_RoutingKey) ->
+    io:format("RoutingKey should be list type").
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -84,7 +87,7 @@ init([RoutingKey]) ->
     Binding = #'queue.bind'{queue = Q, exchange = Exchange, routing_key = RoutingKey},
      #'queue.bind_ok'{} = amqp_channel:call(Channel, Binding),
     Sub = #'basic.consume'{queue = Q},
-    % 
+    % Subscribe the channel and consume the message
     Consumer = self(),
     #'basic.consume_ok'{consumer_tag = Tag} = amqp_channel:subscribe(Channel, Sub, Consumer),
     {ok, #state{}}.
@@ -136,7 +139,6 @@ handle_info(#'basic.cancel_ok'{}, State) ->
     {noreply, State};
 
 handle_info({#'basic.deliver'{delivery_tag = Tag}, {_, _, Message} = Content}, State) ->
-
     io:format("> ~ts~n", [Message]),
     {noreply, State};
 

@@ -32,21 +32,15 @@
                 level,
                 exchange,
                 params,
-                trace_rk
+                routing_key
                }).
 
-init({Name, Level, Exchange, Username, Password, Vhost, Host, TraceRK, Port}) 
-  when is_list(Name), is_atom(Level) ->
-    %% backwards compatability hack
-    init([{name, Name}, {level, Level}, {exchang, Exchange}, {amqp_user, Username}, {amqp_pass, Password}, 
-      {amqp_vhost, Vhost}, {amqp_host, Host}, {trace_rk, TraceRK}, {amqp_port, Port}]);
-    
 init(Params) ->
   
     Name  = config_val(name, Params, ?MODULE),  
     Level = lager_util:level_to_num(config_val(level, Params, debug)),
     Exchange = config_val(exchange, Params, list_to_binary(atom_to_list(?MODULE))),
-    TraceRK  = config_val(trace_rk, Params, undefined),
+    RoutingKey  = config_val(routing_key, Params, undefined),
 
     AmqpParams = #amqp_params_network {
       username       = config_val(amqp_user, Params, <<"guest">>),
@@ -61,7 +55,7 @@ init(Params) ->
                                                                                type = <<"topic">> }),
   
     {ok, #state{ name  = Name,
-                 trace_rk = TraceRK,
+                 routing_key = RoutingKey,
                  level = Level, 
                  exchange = Exchange,
                  params = AmqpParams
@@ -77,8 +71,8 @@ handle_call(get_loglevel, #state{ level = Level } = State) ->
 handle_call(_Request, State) ->
     {ok, ok, State}.
 
-handle_event({log,  Message}, #state{ name = Name, trace_rk = TraceRK, level = L } = State) ->
-    case lager_util:is_loggable(Message, L, {lager_amqp_backend, TraceRK}) of
+handle_event({log,  Message}, #state{ name = Name, routing_key = RoutingKey, level = L } = State) ->
+    case lager_util:is_loggable(Message, L, {lager_amqp_backend, RoutingKey}) of
         true ->
             {ok, 
             log(State, lager_msg:datetime(Message), 
@@ -110,11 +104,11 @@ log(#state{params = AmqpParams } = State, {Date, Time}, Level, Message) ->
     end.    
 
 
-send(#state{ name = Name, exchange = Exchange, trace_rk = TraceRK } = State, Node, Level, Message, Channel) ->
+send(#state{ name = Name, exchange = Exchange, routing_key = RK } = State, Node, Level, Message, Channel) ->
     
-    RoutingKey = case TraceRK of
+    RoutingKey = case RK of
                      undefined -> routing_key(Node, Name, Level);
-                     _ -> TraceRK
+                     _ -> RK
                  end,
     Publish = #'basic.publish'{ exchange = Exchange, routing_key = RoutingKey },
     Props = #'P_basic'{ content_type = <<"text/plain">> },
