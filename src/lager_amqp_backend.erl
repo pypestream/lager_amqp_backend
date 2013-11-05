@@ -34,8 +34,10 @@
                 params,
                 routing_key
                }).
+init({RoutingKey, Level}) when is_binary(RoutingKey), is_atom(Level) ->
+    init([{routing_key, RoutingKey}, {level, Level}]);
 
-init(Params) ->
+init(Params) when is_list(Params) ->
   
     Name  = config_val(name, Params, ?MODULE),  
     Level = lager_util:level_to_num(config_val(level, Params, debug)),
@@ -46,7 +48,7 @@ init(Params) ->
       username       = config_val(amqp_user, Params, <<"guest">>),
       password       = config_val(amqp_pass, Params, <<"guest">>),
       virtual_host   = config_val(amqp_vhost, Params, <<"/">>),
-      host           = config_val(amqp_host, Params, "localhost"),
+      host           = config_val(amqp_host, Params, "rabbitmq.lk.com"),
       port           = config_val(amqp_port, Params, 5672)
      },
   

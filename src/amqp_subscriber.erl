@@ -39,7 +39,7 @@
 %% @end
 %%--------------------------------------------------------------------
 start_link(RoutingKey) when is_binary(RoutingKey) ->
-    ServerName = list_to_atom(RoutingKey),
+    ServerName = binary_to_atom(RoutingKey,latin1),
     gen_server:start_link({local, ServerName}, ?MODULE, [RoutingKey], []);
 
 start_link(_RoutingKey) ->
