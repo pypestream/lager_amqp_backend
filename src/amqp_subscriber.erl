@@ -90,7 +90,7 @@ init([RoutingKey]) ->
     Sub = #'basic.consume'{queue = Q},
     % Subscribe the channel and consume the message
     Consumer = self(),
-    #'basic.consume_ok'{consumer_tag = Tag} = amqp_channel:subscribe(Channel, Sub, Consumer),
+    #'basic.consume_ok'{consumer_tag = _Tag} = amqp_channel:subscribe(Channel, Sub, Consumer),
     {ok, #state{}}.
 
 %%--------------------------------------------------------------------
@@ -139,7 +139,7 @@ handle_info(#'basic.consume_ok'{}, State) ->
 handle_info(#'basic.cancel_ok'{}, State) ->
     {noreply, State};
 
-handle_info({#'basic.deliver'{delivery_tag = Tag}, {_, _, Message} = Content}, State) ->
+handle_info({#'basic.deliver'{delivery_tag = _Tag}, {_, _, Message} = _Content}, State) ->
     io:format("> ~ts~n", [Message]),
     {noreply, State};
 

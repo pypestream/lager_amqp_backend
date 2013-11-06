@@ -48,7 +48,7 @@ init(Params) when is_list(Params) ->
       username       = config_val(amqp_user, Params, <<"guest">>),
       password       = config_val(amqp_pass, Params, <<"guest">>),
       virtual_host   = config_val(amqp_vhost, Params, <<"/">>),
-      host           = config_val(amqp_host, Params, "rabbitmq.lk.com"),
+      host           = config_val(amqp_host, Params, "127.0.0.1"),
       port           = config_val(amqp_port, Params, 5672)
      },
   
@@ -73,13 +73,13 @@ handle_call(get_loglevel, #state{ level = Level } = State) ->
 handle_call(_Request, State) ->
     {ok, ok, State}.
 
-handle_event({log,  Message}, #state{ name = Name, routing_key = RoutingKey, level = L } = State) ->
+handle_event({log,  Message}, #state{routing_key = RoutingKey, level = L } = State) ->
     case lager_util:is_loggable(Message, L, {lager_amqp_backend, RoutingKey}) of
         true ->
             {ok, 
             log(State, lager_msg:datetime(Message), 
-                lager_msg:severity_as_int(Message),
-                lager_msg:message(Message))};
+                       lager_msg:severity_as_int(Message),
+                       lager_msg:message(Message))};
         false ->
             {ok, State}
     end;

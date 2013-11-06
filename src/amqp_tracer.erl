@@ -27,7 +27,8 @@
          stop_trace/1,
          stop_trace/2,
          clear_all_traces/0,
-         clear_all_traces/1]).
+         clear_all_traces/1,
+         status/0]).
 
 -define(SERVER, ?MODULE). 
 
@@ -46,6 +47,7 @@ trace_amqp(RoutingKey, Filter, Level) ->
 trace_amqp(distributed, RoutingKey, Filter, Level) ->
     lists:foreach(
       fun(Node) ->
+              io:format("~p trace: ~p on level ~p~n", [Node, Filter, Level]),
               gen_server:cast({?SERVER, Node}, {trace, RoutingKey, Filter, Level})
       end, nodes()).
 
@@ -68,7 +70,9 @@ clear_all_traces(distributed) ->
       fun(Node) ->
               gen_server:cast({?SERVER, Node}, clear_all_traces)
       end, nodes()).
-    
+
+status() ->
+    ok.
 %%--------------------------------------------------------------------
 %% @doc
 %% Starts the server
