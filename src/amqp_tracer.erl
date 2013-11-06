@@ -72,6 +72,15 @@ clear_all_traces(distributed) ->
       end, nodes()).
 
 status() ->
+    lists:foreach(
+     fun(Node) ->
+             io:format("Lager status on node ~p: ~n", [Node]),
+             case rpc:call(Node, lager, status, [], 60000) of
+                 {badrpc, Reason} ->
+                     io:format("RPC failed because of the reason: ~p", [Reason]);
+                 _ -> ok
+             end
+     end, nodes())
     ok.
 %%--------------------------------------------------------------------
 %% @doc
