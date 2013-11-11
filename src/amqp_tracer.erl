@@ -80,7 +80,7 @@ status() ->
                      io:format("RPC failed because of the reason: ~p", [Reason]);
                  _ -> ok
              end
-     end, nodes())
+     end, nodes()),
     ok.
 %%--------------------------------------------------------------------
 %% @doc
