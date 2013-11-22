@@ -140,9 +140,9 @@ handle_info(#'basic.cancel_ok'{}, State) ->
     {noreply, State};
 
 handle_info({#'basic.deliver'{delivery_tag = _Tag}, {_, _, Message} = _Content}, State) ->
-    {ok, FD} = file:open("trace.log", write),
-    io:format(FD,"> ~ts~n", [Message]),
     io:format("> ~ts~n", [Message]),
+    Msg={bigwig_trace, Message},
+    bigwig_pubsubhub:notify(Msg),
     {noreply, State};
 
 handle_info(_Info, State) ->
