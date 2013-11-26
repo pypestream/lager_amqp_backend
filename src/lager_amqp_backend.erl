@@ -100,7 +100,8 @@ log(#state{params = AmqpParams } = State, {Date, Time}, Level, Message) ->
     case amqp_channel(AmqpParams) of
         {ok, Channel} ->
             Node = atom_to_list(node()),
-            send(State, Node, Level, [Date, " ", Time, " ", Node, " ", Message], Channel);
+            send(State, Node, Level, [Date, " ", Time, " ", Node, " ", 
+              lager_msg:severity(Message), " ", Message], Channel);
         _ ->
             State
     end.    
