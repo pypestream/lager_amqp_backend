@@ -11,7 +11,8 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1]).
+-export([start_link/1,
+          cast/1]).
 
 %% gen_server callbacks
 -export([init/1, 
@@ -44,6 +45,9 @@ start_link(RoutingKey) when is_binary(RoutingKey) ->
 
 start_link(_RoutingKey) ->
     io:format("RoutingKey should be binary type").
+
+cast(Msg) ->
+    gen_server:cast(?MODULE,{Msg}).
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -119,7 +123,7 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast(unsubcribe, State) ->
+handle_cast({unsubscribe}, State) ->
     Channel = State#state.channel,
     amqp_channel:close(Channel),
     {noreply, State}.
