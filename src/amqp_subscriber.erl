@@ -25,7 +25,7 @@
 -include_lib("amqp_client/include/amqp_client.hrl").
 
 
--record(state, {}).
+-record(state, {channel}).
 
 %%%===================================================================
 %%% API
@@ -44,8 +44,6 @@ start_link(RoutingKey) when is_binary(RoutingKey) ->
 
 start_link(_RoutingKey) ->
     io:format("RoutingKey should be binary type").
-
-
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -91,7 +89,7 @@ init([RoutingKey]) ->
     % Subscribe the channel and consume the message
     Consumer = self(),
     #'basic.consume_ok'{consumer_tag = _Tag} = amqp_channel:subscribe(Channel, Sub, Consumer),
-    {ok, #state{}}.
+    {ok, #state{channel=Channel}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -121,7 +119,9 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast(_Msg, State) ->
+handle_cast(unsubcribe, State) ->
+    Channel = State#state.channel,
+    amqp_channel:close(Channel),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
