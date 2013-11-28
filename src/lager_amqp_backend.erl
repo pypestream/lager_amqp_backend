@@ -34,8 +34,8 @@
                 params,
                 routing_key
                }).
-init({RoutingKey, Level}) when is_binary(RoutingKey), is_atom(Level) ->
-    init([{routing_key, RoutingKey}, {level, Level}]);
+init({RoutingKey, Level, Host}) when is_binary(RoutingKey), is_atom(Level) ->
+    init([{routing_key, RoutingKey}, {level, Level}, {amqp_host, Host}]);
 
 init(Params) when is_list(Params) ->
   
