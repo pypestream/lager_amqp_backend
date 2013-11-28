@@ -130,7 +130,7 @@ handle_cast({unsubscribe}, State) ->
     io:format("unsubscribe begin ~n"),
     Consumer_tag = State#state.consumer_tag,
     Channel = State#state.channel,
-    Method = #'basic.cancel'{consumer_tag = Consumer_Tag},
+    Method = #'basic.cancel'{consumer_tag = Consumer_tag},
     amqp_channel:call(Channel, Method),
     io:format("unsubscribe over ~n"),
     {noreply, State}.
