@@ -26,7 +26,8 @@
 -include_lib("amqp_client/include/amqp_client.hrl").
 
 
--record(state, {consumer_tag}).
+-record(state, {channel,
+                consumer_tag}).
 
 %%%===================================================================
 %%% API
@@ -95,7 +96,7 @@ init([RoutingKey]) ->
     #'basic.consume_ok'{consumer_tag = Tag} = amqp_channel:subscribe(Channel, Sub, Consumer),
     Consumer_tag = Tag,
     io:format("consumer_tag is ~p~n",[Consumer_tag]),
-    {ok, #state{consumer_tag=Consumer_tag}}.
+    {ok, #state{channel=Channel, consumer_tag=Consumer_tag}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -128,7 +129,8 @@ handle_call(_Request, _From, State) ->
 handle_cast({unsubscribe}, State) ->
     io:format("unsubscribe begin ~n"),
     Consumer_tag = State#state.consumer_tag,
-    Method = #'basic.cancel'{consumer_tag = ConsumerTag},
+    Channel = State#state.channel,
+    Method = #'basic.cancel'{consumer_tag = Consumer_Tag},
     amqp_channel:call(Channel, Method),
     io:format("unsubscribe over ~n"),
     {noreply, State}.
