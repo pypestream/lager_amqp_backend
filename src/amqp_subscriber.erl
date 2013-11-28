@@ -26,7 +26,8 @@
 -include_lib("amqp_client/include/amqp_client.hrl").
 
 
--record(state, {channel,
+-record(state, {channel, 
+                 queue,
                 consumer_tag}).
 
 %%%===================================================================
@@ -95,8 +96,9 @@ init([RoutingKey]) ->
     Consumer = self(),
     #'basic.consume_ok'{consumer_tag = Tag} = amqp_channel:subscribe(Channel, Sub, Consumer),
     Consumer_tag = Tag,
+    io:format("channel is ~p~n",[Channel]),
     io:format("consumer_tag is ~p~n",[Consumer_tag]),
-    {ok, #state{channel=Channel, consumer_tag=Consumer_tag}}.
+    {ok, #state{channel=Channel, queue=Q, consumer_tag=Consumer_tag}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -133,7 +135,16 @@ handle_cast({unsubscribe}, State) ->
     Method = #'basic.cancel'{consumer_tag = Consumer_tag},
     amqp_channel:call(Channel, Method),
     io:format("unsubscribe over ~n"),
-    {noreply, State}.
+    {noreply, State};
+handle_cast({subscribe}, State) ->
+     Channel=State#state.channel,
+     Q=State#state.queue,
+     Sub = #'basic.consume'{queue = Q},
+     Consumer=self(),
+     io:format("subscribe again"),
+     #'basic.consume_ok'{consumer_tag = Consumer_tag} = amqp_channel:subscribe(Channel, Sub, Consumer),
+     io:format("subscribe again over"),
+     {noreply,#state{consumer_tag=Consumer_tag}}.
 
 %%--------------------------------------------------------------------
 %% @private
