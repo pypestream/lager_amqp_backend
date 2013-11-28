@@ -26,7 +26,7 @@
 -include_lib("amqp_client/include/amqp_client.hrl").
 
 
--record(state, {channel}).
+-record(state, {consumer_tag}).
 
 %%%===================================================================
 %%% API
@@ -41,7 +41,7 @@
 %%--------------------------------------------------------------------
 start_link(RoutingKey) when is_binary(RoutingKey) ->
     ServerName = binary_to_atom(RoutingKey,latin1),
-    gen_server:start_link({local, ServerName}, ?MODULE, [RoutingKey], []);
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [RoutingKey], []);
 
 start_link(_RoutingKey) ->
     io:format("RoutingKey should be binary type").
@@ -92,8 +92,10 @@ init([RoutingKey]) ->
     Sub = #'basic.consume'{queue = Q},
     % Subscribe the channel and consume the message
     Consumer = self(),
-    #'basic.consume_ok'{consumer_tag = _Tag} = amqp_channel:subscribe(Channel, Sub, Consumer),
-    {ok, #state{channel=Channel}}.
+    #'basic.consume_ok'{consumer_tag = Tag} = amqp_channel:subscribe(Channel, Sub, Consumer),
+    Consumer_tag = Tag,
+    io:format("consumer_tag is ~p~n",[Consumer_tag]),
+    {ok, #state{consumer_tag=Consumer_tag}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -124,8 +126,11 @@ handle_call(_Request, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({unsubscribe}, State) ->
-    Channel = State#state.channel,
-    amqp_channel:close(Channel),
+    io:format("unsubscribe begin ~n"),
+    Consumer_tag = State#state.consumer_tag,
+    Method = #'basic.cancel'{consumer_tag = ConsumerTag},
+    amqp_channel:call(Channel, Method),
+    io:format("unsubscribe over ~n"),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
