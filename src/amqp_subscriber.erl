@@ -95,10 +95,11 @@ init([RoutingKey]) ->
     % Subscribe the channel and consume the message
     Consumer = self(),
     #'basic.consume_ok'{consumer_tag = Tag} = amqp_channel:subscribe(Channel, Sub, Consumer),
-    Consumer_tag = Tag,
+    io:format("init start ~n"),
     io:format("channel is ~p~n",[Channel]),
-    io:format("consumer_tag is ~p~n",[Consumer_tag]),
-    {ok, #state{channel=Channel, queue=Q, consumer_tag=Consumer_tag}}.
+    io:format("consumer_tag is ~p~n",[Tag]),
+    io:format("init over ~n"),
+    {ok, #state{channel = Channel, sub = Sub, consumer_tag = Tag}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -134,15 +135,18 @@ handle_cast({unsubscribe}, State) ->
     Channel = State#state.channel,
     Method = #'basic.cancel'{consumer_tag = Consumer_tag},
     #'basic.cancel_ok'{consumer_tag = Consumer_tag1} = amqp_channel:call(Channel, Method),
+    io:format("channel is ~p~n",[Channel]),
+    io:format("consumer_tag is ~p~n",[Consumer_tag1]),
     io:format("unsubscribe over ~n"),
     {noreply, State};
 handle_cast({subscribe}, State) ->
      Channel=State#state.channel,
-     Q=State#state.queue,
-     Sub = #'basic.consume'{queue = Q},
+     Sub=State#state.sub,
      Consumer=self(),
      io:format("subscribe again"),
      #'basic.consume_ok'{consumer_tag = Consumer_tag} = amqp_channel:subscribe(Channel, Sub, Consumer),
+     io:format("channel is ~p~n",[Channel]),
+     io:format("consumer_tag is ~p~n",[Consumer_tag]),
      io:format("subscribe again over"),
      {noreply,#state{consumer_tag=Consumer_tag}}.
 
