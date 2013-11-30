@@ -26,7 +26,8 @@
 -include_lib("amqp_client/include/amqp_client.hrl").
 
 
--record(state, {channel, 
+-record(state, {channel,
+                 connection, 
                  sub,
                 consumer_tag}).
 
@@ -82,8 +83,11 @@ init([RoutingKey]) ->
       port           = config_val(amqp_port, Params, 5672)
      },
 
+    {ok, Connection} =
+        amqp_connection:start(AmqpParams),
+    {ok, Channel} = amqp_connection:open_channel(Connection),
 
-    {ok, Channel} = amqp_channel(AmqpParams),
+    %{ok, Channel} = amqp_channel(AmqpParams),
     #'exchange.declare_ok'{} = amqp_channel:call(Channel, #'exchange.declare'{ exchange = Exchange, 
                                                                                type = <<"topic">> }),
 
@@ -99,7 +103,7 @@ init([RoutingKey]) ->
     io:format("channel is ~p~n",[Channel]),
     io:format("consumer_tag is ~p~n",[Tag]),
     io:format("init over ~n"),
-    {ok, #state{channel = Channel, sub = Sub, consumer_tag = Tag}}.
+    {ok, #state{channel = Channel, connection = Connection, sub = Sub, consumer_tag = Tag}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -133,8 +137,11 @@ handle_cast({unsubscribe}, State) ->
     io:format("unsubscribe begin ~n"),
     Consumer_tag = State#state.consumer_tag,
     Channel = State#state.channel,
+    Connection = State#state.connection,
     Method = #'basic.cancel'{consumer_tag = Consumer_tag},
     #'basic.cancel_ok'{consumer_tag = Consumer_tag1} = amqp_channel:call(Channel, Method),
+    amqp_channel:close(Channel),
+    amqp_channel:close(Connection),
     io:format("channel is ~p~n",[Channel]),
     io:format("consumer_tag is ~p~n",[Consumer_tag1]),
     io:format("unsubscribe over ~n"),
