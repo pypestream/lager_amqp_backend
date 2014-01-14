@@ -155,7 +155,9 @@ handle_cast({subscribe}, State) ->
      io:format("channel is ~p~n",[Channel]),
      io:format("consumer_tag is ~p~n",[Consumer_tag]),
      io:format("subscribe again over"),
-     {noreply,#state{consumer_tag=Consumer_tag}}.
+     {noreply,#state{consumer_tag=Consumer_tag}};
+handle_cast(_Msg, State) ->
+    {noreply, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -172,10 +174,12 @@ handle_info(#'basic.consume_ok'{}, State) ->
 handle_info(#'basic.cancel_ok'{}, State) ->
     {noreply, State};
 
-handle_info({#'basic.deliver'{delivery_tag = _Tag}, {_, _, Message} = _Content}, State) ->
+handle_info({#'basic.deliver'{delivery_tag = Tag}, {_, _, Message} = _Content}, 
+    #state{channel = Channel} = State) ->
     io:format("> ~ts~n", [Message]),
     Msg={bigwig_trace, Message},
     bigwig_pubsubhub:notify(Msg),
+    amqp_channel:cast(Channel, #'basic.ack'{delivery_tag = Tag}),
     {noreply, State};
 
 handle_info(_Info, State) ->
