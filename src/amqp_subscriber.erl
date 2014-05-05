@@ -41,7 +41,7 @@
 %% @end
 %%--------------------------------------------------------------------
 start_link(RoutingKey) when is_binary(RoutingKey) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [RoutingKey], []);
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [RoutingKey], []).
 
 %%%===================================================================
 %%% gen_server callbacks
