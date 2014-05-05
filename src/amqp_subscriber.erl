@@ -43,7 +43,7 @@
 %% @end
 %%--------------------------------------------------------------------
 start_link(RoutingKey) when is_binary(RoutingKey) ->
-    ServerName = binary_to_atom(RoutingKey,latin1),
+    _ServerName = binary_to_atom(RoutingKey,latin1),
     gen_server:start_link({local, ?MODULE}, ?MODULE, [RoutingKey], []);
 
 start_link(_RoutingKey) ->
@@ -99,10 +99,6 @@ init([RoutingKey]) ->
     % Subscribe the channel and consume the message
     Consumer = self(),
     #'basic.consume_ok'{consumer_tag = Tag} = amqp_channel:subscribe(Channel, Sub, Consumer),
-    io:format("init start ~n"),
-    io:format("channel is ~p~n",[Channel]),
-    io:format("consumer_tag is ~p~n",[Tag]),
-    io:format("init over ~n"),
     {ok, #state{channel = Channel, connection = Connection, sub = Sub, consumer_tag = Tag}}.
 
 %%--------------------------------------------------------------------
@@ -134,27 +130,19 @@ handle_call(_Request, _From, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({unsubscribe}, State) ->
-    io:format("unsubscribe begin ~n"),
     Consumer_tag = State#state.consumer_tag,
     Channel = State#state.channel,
     Connection = State#state.connection,
     Method = #'basic.cancel'{consumer_tag = Consumer_tag},
-    #'basic.cancel_ok'{consumer_tag = Consumer_tag1} = amqp_channel:call(Channel, Method),
+    #'basic.cancel_ok'{consumer_tag = _Consumer_tag1} = amqp_channel:call(Channel, Method),
     amqp_channel:close(Channel),
     amqp_channel:close(Connection),
-    io:format("channel is ~p~n",[Channel]),
-    io:format("consumer_tag is ~p~n",[Consumer_tag1]),
-    io:format("unsubscribe over ~n"),
     {noreply, State};
 handle_cast({subscribe}, State) ->
      Channel=State#state.channel,
      Sub=State#state.sub,
      Consumer=self(),
-     io:format("subscribe again"),
      #'basic.consume_ok'{consumer_tag = Consumer_tag} = amqp_channel:subscribe(Channel, Sub, Consumer),
-     io:format("channel is ~p~n",[Channel]),
-     io:format("consumer_tag is ~p~n",[Consumer_tag]),
-     io:format("subscribe again over"),
      {noreply,#state{consumer_tag=Consumer_tag}};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -215,32 +203,32 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 
 
-amqp_channel(AmqpParams) ->
-    case maybe_new_pid({AmqpParams, connection},
-                       fun() -> amqp_connection:start(AmqpParams) end) of
-        {ok, Client} ->
-            maybe_new_pid({AmqpParams, channel},
-                          fun() -> amqp_connection:open_channel(Client) end);
-        Error ->
-            Error
-    end.
+% amqp_channel(AmqpParams) ->
+%     case maybe_new_pid({AmqpParams, connection},
+%                        fun() -> amqp_connection:start(AmqpParams) end) of
+%         {ok, Client} ->
+%             maybe_new_pid({AmqpParams, channel},
+%                           fun() -> amqp_connection:open_channel(Client) end);
+%         Error ->
+%             Error
+%     end.
 
-maybe_new_pid(Group, StartFun) ->
-    case pg2:get_closest_pid(Group) of
-        {error, {no_such_group, _}} ->
-            pg2:create(Group),
-            maybe_new_pid(Group, StartFun);
-        {error, {no_process, _}} ->
-            case StartFun() of
-                {ok, Pid} ->
-                    pg2:join(Group, Pid),
-                    {ok, Pid};
-                Error ->
-                    Error
-            end;
-        Pid ->
-            {ok, Pid}
-    end.
+% maybe_new_pid(Group, StartFun) ->
+%     case pg2:get_closest_pid(Group) of
+%         {error, {no_such_group, _}} ->
+%             pg2:create(Group),
+%             maybe_new_pid(Group, StartFun);
+%         {error, {no_process, _}} ->
+%             case StartFun() of
+%                 {ok, Pid} ->
+%                     pg2:join(Group, Pid),
+%                     {ok, Pid};
+%                 Error ->
+%                     Error
+%             end;
+%         Pid ->
+%             {ok, Pid}
+%     end.
 
 
 config_val(C, Params, Default) ->
