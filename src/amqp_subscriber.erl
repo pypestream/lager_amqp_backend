@@ -41,7 +41,7 @@
 %% @end
 %%--------------------------------------------------------------------
 start_link(RoutingKey) when is_binary(RoutingKey) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [RoutingKey], []).
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [RoutingKey], []);
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -85,11 +85,13 @@ init([RoutingKey]) ->
     % Subscribe the channel and consume the message
     Sub = #'basic.consume'{queue = Q},
     Consumer = self(),
+
     #'basic.consume_ok'{consumer_tag = CTag} = amqp_channel:subscribe(Channel, Sub, Consumer),
     
     {ok, #state{channel      = Channel,
                 queue        = Q,
                 consumer_tag = CTag}}.
+
 
 %%--------------------------------------------------------------------
 %% @private
@@ -195,3 +197,4 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
