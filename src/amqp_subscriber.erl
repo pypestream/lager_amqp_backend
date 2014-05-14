@@ -71,7 +71,7 @@ init([RoutingKey]) ->
       port           = proplists:get_value(amqp_port, Params, 5672)
      },
 
-    {ok, Channel} = amqp_client:amqp_channel(AmqpParams),
+    {ok, Channel} = amqp_client2:amqp_channel(AmqpParams),
     #'exchange.declare_ok'{} = amqp_channel:call(Channel, #'exchange.declare'{ exchange = Exchange, 
                                                                                type = <<"topic">> }),
 
@@ -158,7 +158,7 @@ handle_info(#'basic.consume_ok'{}, State) ->
 handle_info(#'basic.cancel_ok'{}, State) ->
     {noreply, State};
 
-handle_info({#'basic.deliver'{delivery_tag = DTag}, Content}, 
+handle_info({#'basic.deliver'{delivery_tag = DTag}, #amqp_msg{_, Content}}, 
     #state{channel = Channel} = State) ->
     Message = binary_to_term(Content),
     io:format("> ~s~n", [Message]),

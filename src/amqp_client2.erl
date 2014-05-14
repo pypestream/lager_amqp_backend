@@ -6,7 +6,7 @@
 %%% @end
 %%% Created :  5 May 2014 by Jack Tang <jack@taodinet.com>
 %%%-------------------------------------------------------------------
--module(amqp_client).
+-module(amqp_client2).
 
 %% API
 -export([amqp_channel/1]).
