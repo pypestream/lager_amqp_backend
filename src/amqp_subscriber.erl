@@ -158,7 +158,7 @@ handle_info(#'basic.consume_ok'{}, State) ->
 handle_info(#'basic.cancel_ok'{}, State) ->
     {noreply, State};
 
-handle_info({#'basic.deliver'{delivery_tag = DTag}, #amqp_msg{_, Content}}, 
+handle_info({#'basic.deliver'{delivery_tag = DTag}, {_, _, Content}},
     #state{channel = Channel} = State) ->
     Message = binary_to_term(Content),
     io:format("> ~s~n", [Message]),

@@ -47,9 +47,9 @@ test() ->
   %%application:set_env(lager, handlers, [{lager_console_backend, debug}, {lager_amqp_backend, []}]),
   %%application:set_env(lager, error_logger_redirect, false),
   application:start(lager),
-  lager:log(info, self(), "Test INFO message"),
-  lager:log(debug, self(), "Test DEBUG message"),
-  lager:log(error, self(), "Test ERROR message").
+  lager:log(info, self(), erlang:list_to_binary("Test INFO message")),
+  lager:log(debug, self(), erlang:list_to_binary("Test DEBUG message")),
+  lager:log(error, self(), erlang:list_to_binary("Test ERROR message")).
   
 %%%===================================================================
 %%% gen_event callbacks
