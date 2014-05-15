@@ -108,7 +108,7 @@ init(Params) when is_list(Params) ->
       port           = proplists:get_value(amqp_port, Params, 5672)
      },
   
-    {ok, Channel} = amqp_client2:amqp_channel(AmqpParams),
+    {ok, Channel} = amqp_utils:amqp_channel(AmqpParams),
     #'exchange.declare_ok'{} = amqp_channel:call(Channel, #'exchange.declare'{ exchange = Exchange, 
                                                                                type = <<"topic">> }),
   
@@ -214,7 +214,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 log(#state{params = AmqpParams } = State, {Date, Time}, Level, Message) ->
-    case amqp_client2:amqp_channel(AmqpParams) of
+    case amqp_utils:amqp_channel(AmqpParams) of
         {ok, Channel} ->
             Node = atom_to_list(node()),
             Level1 = atom_to_list(lager_util:num_to_level(Level)),

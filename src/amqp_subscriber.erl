@@ -71,7 +71,7 @@ init([RoutingKey]) ->
       port           = proplists:get_value(amqp_port, Params, 5672)
      },
 
-    {ok, Channel} = amqp_client2:amqp_channel(AmqpParams),
+    {ok, Channel} = amqp_utils:amqp_channel(AmqpParams),
     #'exchange.declare_ok'{} = amqp_channel:call(Channel, #'exchange.declare'{ exchange = Exchange, 
                                                                                type = <<"topic">> }),
 
@@ -180,7 +180,14 @@ handle_info(_Info, State) ->
 %% @spec terminate(Reason, State) -> void()
 %% @end
 %%--------------------------------------------------------------------
-terminate(_Reason, _State) ->
+terminate(_Reason, #state{} = State) ->
+    % close the channel
+    #state{ consumer_tag = CTag,
+            channel      = Channel } = State,
+    
+    Cancel = #'basic.cancel'{consumer_tag = CTag},
+    #'basic.cancel_ok'{} = amqp_channel:call(Channel, Cancel),
+    amqp_channel:close(Channel),
     ok.
 
 %%--------------------------------------------------------------------
