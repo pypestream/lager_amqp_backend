@@ -22,6 +22,8 @@
          terminate/2,
          code_change/3]).
 
+-export([config_to_id/1]).
+
 -define(SERVER, ?MODULE). 
 -include_lib("amqp_client/include/amqp_client.hrl").
 
@@ -213,6 +215,14 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+config_to_id(Config) ->
+    case proplists:get_value(routing_key, Config) of
+        undefined ->
+            erlang:error(no_file);
+        RoutingKey ->
+            {?MODULE, RoutingKey}
+    end.
+
 log(#state{params = AmqpParams } = State, {Date, Time}, Level, Message) ->
     case amqp_utils:amqp_channel(AmqpParams) of
         {ok, Channel} ->
