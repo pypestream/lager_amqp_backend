@@ -202,7 +202,7 @@ do_trace_amqp(RoutingKey, Filter, Level) ->
                     %% install the handler, https://github.com/basho/lager/issues/65
                     supervisor:start_child(lager_handler_watcher_sup,
                         [lager_event, {lager_amqp_backend, RoutingKey},
-                                      [{routing_key,<<"test_amqp">>},{level,none}] ]);
+                                      [{routing_key, RoutingKey},{level,none}] ]);
                 _ ->
                     {ok, exists}
             end,
