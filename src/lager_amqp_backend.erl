@@ -229,7 +229,7 @@ log(#state{params = AmqpParams } = State, {Date, Time}, Level, Message) ->
             Node = atom_to_list(node()),
             Level1 = atom_to_list(lager_util:num_to_level(Level)),
             send(State, Node, Level,
-                 term_to_binary([Date, Time, Node, Level1, Message]),
+                 term_to_binary([Date, Time, Node, Level1, list_to_binary(Message)]),
                  Channel);
         _ ->
             State
