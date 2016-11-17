@@ -293,7 +293,7 @@ routing_key(Node, Name, Level) ->
 
 
 encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Message, Metadata) ->
-   io:format("Message:~p~n",[Message]),
+   try
     DateTime = io_lib:format("~sT~s", [Date,Time]),
     Metadata2 = [ {K, tcl_tools:binarize([V])}  ||{K,V} <- Metadata ],
     jiffy:encode({[
@@ -309,6 +309,12 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
         {<<"data">>, tcl_tools:binarize([Message])},
         {<<"type">>, <<"erlang-logs">>}
     ]
-    }).
+    })
+
+   catch
+       Error ->
+           Stacktrace = erlang:get_stacktrace(),
+           io:format("Stacktrace:~p~n",[Stacktrace])
+   end.
 
 
