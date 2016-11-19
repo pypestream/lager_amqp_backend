@@ -143,9 +143,11 @@ handle_event({log,  Message}, #state{routing_key = RoutingKey, level = L } = Sta
 
     case lager_util:is_loggable(Message, L, {lager_amqp_backend, RoutingKey}) of
         true ->
+
             Meta = lager_msg:metadata(Message),
+            Metadata2 = [ { tcl_tools:binarize([K]), tcl_tools:binarize([V])}  ||{K,V} <- Meta ],
             ContentType = proplists:get_value(content_type, Meta),
-            {ok, log(Meta,
+            {ok, log(Metadata2,
                      ContentType,
                      State,
                      lager_msg:datetime(Message),
@@ -234,17 +236,18 @@ config_to_id(Config) ->
 
 
 log(Metadata, <<"application/json">> = ContentType, #state{params = AmqpParams } = State, {Date, Time}, Level, _Message) ->
-    Payload = proplists:get_value(payload, Metadata),
+    Payload = proplists:get_value(<<"payload">>, Metadata),
     case amqp_utils:amqp_channel(AmqpParams) of
         {ok, Channel} ->
             Node = atom_to_list(node()),
+
             Level1 = atom_to_list(lager_util:num_to_level(Level)),
             %Payload = encode_json_event(undefined, Node, undefined, undefined, Level1, Date, Time, Message, Metadata),
             send(State, Node, Level,
                  %term_to_binary([Date, Time, Node, Level1, Message]),
                  Payload,
                  Channel,
-                 <<"application/json">>);
+                 <<"application/json">>, Metadata);
         _ ->
             State
     end;
@@ -259,7 +262,7 @@ log(Metadata,  _ContentType, #state{params = AmqpParams } = State, {Date, Time},
             Payload = encode_json_event(undefined, Node, undefined, undefined, Level1, Date, Time, _Message, Metadata),
             send(State, Node, Level,
                 Payload,
-                Channel, <<"text/plain">>);
+                Channel, <<"text/plain">>, Metadata);
         _ ->
             State
     end;
@@ -271,11 +274,12 @@ log(_Metadata, _ContentType, State, _, _, _) ->
 
 send(#state{ name        = Name,
              exchange    = Exchange,
-             routing_key = RK } = State, Node, Level, MsgBin, Channel, ContentType) ->
+             routing_key = RK } = State, Node, Level, MsgBin, Channel, ContentType, Metadata) ->
     RoutingKey = case RK of
                      undefined -> routing_key(Node, Name, Level);
                      _ -> RK
                  end,
+    %Metadata2 = jiffy:encode({Metadata}),
     Props =  #'P_basic'{content_type =ContentType},
     Publish = #'basic.publish'{ exchange = Exchange, routing_key = RoutingKey},
     Msg = #amqp_msg{ payload = MsgBin, props = Props },
@@ -295,7 +299,7 @@ routing_key(Node, Name, Level) ->
 encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Message, Metadata) ->
    try
     DateTime = io_lib:format("~sT~s", [Date,Time]),
-    Metadata2 = [ {K, tcl_tools:binarize([V])}  ||{K,V} <- Metadata ],
+
     jiffy:encode({[
         {<<"fields">>,
             {[
@@ -303,10 +307,10 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
                 {<<"role">>, tcl_tools:binarize([Node_Role])},
                 {<<"role_version">>, tcl_tools:binarize([Node_Version])},
                 {<<"node">>,tcl_tools:binarize([Node])}
-            ] ++ Metadata2 }
+            ] ++ Metadata }
         },
         {<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
-        {<<"data">>, tcl_tools:binarize([Message])},
+        {<<"erlang_log">>, tcl_tools:binarize([Message])},
         {<<"type">>, <<"erlang-logs">>}
     ]
     })
