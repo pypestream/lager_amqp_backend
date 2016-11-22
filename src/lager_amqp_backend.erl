@@ -309,7 +309,7 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
                 {<<"node">>,tcl_tools:binarize([Node])}
             ] ++ Metadata }
         },
-        {<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
+        %{<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
         {<<"erlang_log">>, tcl_tools:binarize([Message])},
         {<<"type">>, <<"erlang-logs">>}
     ]
