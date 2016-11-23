@@ -236,16 +236,15 @@ config_to_id(Config) ->
 
 
 log(Metadata, <<"application/json">> = ContentType, #state{params = AmqpParams } = State, {Date, Time}, Level, _Message) ->
-    Payload = proplists:get_value(<<"payload">>, Metadata),
+    %Payload = proplists:get_value(<<"payload">>, Metadata),
     case amqp_utils:amqp_channel(AmqpParams) of
         {ok, Channel} ->
             Node = atom_to_list(node()),
-
             Level1 = atom_to_list(lager_util:num_to_level(Level)),
-            %Payload = encode_json_event(undefined, Node, undefined, undefined, Level1, Date, Time, Message, Metadata),
+            Payload2 = encode_json_event(<<"application/json">>, Node, undefined, undefined, Level1, Date, Time, _Message, Metadata),
             send(State, Node, Level,
                  %term_to_binary([Date, Time, Node, Level1, Message]),
-                 Payload,
+                 Payload2,
                  Channel,
                  <<"application/json">>, Metadata);
         _ ->
@@ -294,6 +293,31 @@ routing_key(Node, Name, Level) ->
                   end,
     list_to_binary(RoutingKey).
 
+
+encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severity, Date, Time, Message, Metadata) ->
+    try
+        %DateTime = io_lib:format("~sT~s", [Date,Time]),
+
+        jiffy:encode({[
+            {<<"json">>,
+                {[
+                    {<<"level">>, tcl_tools:binarize([Severity])},
+                    {<<"role">>, tcl_tools:binarize([Node_Role])},
+                    {<<"role_version">>, tcl_tools:binarize([Node_Version])},
+                    {<<"node">>,tcl_tools:binarize([Node])}
+                ]
+                }
+            },
+            %{<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
+            {<<"type">>, <<"erlang-json">>}
+        ] ++ Metadata
+        })
+
+    catch
+        Error ->
+            Stacktrace = erlang:get_stacktrace(),
+            io:format("Stacktrace:~p~n",[Stacktrace])
+    end;
 
 
 encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Message, Metadata) ->
