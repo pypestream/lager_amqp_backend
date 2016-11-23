@@ -298,7 +298,9 @@ routing_key(Node, Name, Level) ->
 
 encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Message, Metadata) ->
    try
-    DateTime = io_lib:format("~sT~s", [Date,Time]),
+    %DateTime = io_lib:format("~sT~s", [Date,Time]),
+    Payload = proplists:get_value(payload,Metadata),
+    PayloadJSON = jiffy:encode(Payload),
 
     jiffy:encode({[
         {<<"fields">>,
@@ -307,7 +309,7 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
                 {<<"role">>, tcl_tools:binarize([Node_Role])},
                 {<<"role_version">>, tcl_tools:binarize([Node_Version])},
                 {<<"node">>,tcl_tools:binarize([Node])}
-            ] ++ Metadata }
+            ] ++ Metadata ++ [{<<"payload">>,PayloadJSON}] }
         },
         %{<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
         {<<"erlang_log">>, tcl_tools:binarize([Message])},
