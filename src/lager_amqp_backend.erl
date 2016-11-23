@@ -303,18 +303,19 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
     PayloadJSON = jiffy:encode(Payload),
 
     jiffy:encode({[
-        {<<"fields">>,
+        {<<"lager">>,
             {[
                 {<<"level">>, tcl_tools:binarize([Severity])},
                 {<<"role">>, tcl_tools:binarize([Node_Role])},
                 {<<"role_version">>, tcl_tools:binarize([Node_Version])},
                 {<<"node">>,tcl_tools:binarize([Node])}
-            ] ++ Metadata ++ [{<<"payload">>,PayloadJSON}] }
+            ] ++
+               [{log_text, tcl_tools:binarize([Message])}]
+            }
         },
         %{<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
-        {<<"erlang_log">>, tcl_tools:binarize([Message])},
         {<<"type">>, <<"erlang-logs">>}
-    ]
+    ] ++ Metadata ++ [{<<"payload">>,PayloadJSON}]
     })
 
    catch
