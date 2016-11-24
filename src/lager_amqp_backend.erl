@@ -146,7 +146,7 @@ handle_event({log,  Message}, #state{routing_key = RoutingKey, level = L } = Sta
 
             Meta = lager_msg:metadata(Message),
             Metadata2 = [ { tcl_tools:binarize([K]), tcl_tools:binarize([V])}  ||{K,V} <- Meta ],
-            ContentType = proplists:get_value(content_type, Meta),
+            ContentType = proplists:get_value('amqp.content_type', Meta),
             {ok, log(Metadata2,
                      ContentType,
                      State,
@@ -297,8 +297,10 @@ routing_key(Node, Name, Level) ->
 encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severity, Date, Time, Message, Metadata) ->
     try
         %DateTime = io_lib:format("~sT~s", [Date,Time]),
+         Payload  = proplists:get_value(<<"amqp.payload">>, Metadata),
 
-        jiffy:encode({[
+        JSON =
+        jiffy:encode( {[
             {<<"json">>,
                 {[
                     {<<"level">>, tcl_tools:binarize([Severity])},
@@ -310,8 +312,10 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
             },
             %{<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
             {<<"type">>, <<"erlang-json">>}
-        ] ++ Metadata
-        })
+        ] ++ [{<<"json_data">>,jiffy:decode(Payload)}] ++ Metadata
+        }),
+
+        JSON
 
     catch
         Error ->
