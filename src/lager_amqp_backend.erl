@@ -312,7 +312,7 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
             },
             %{<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
             {<<"type">>, <<"erlang-json">>}
-        ] ++ [{<<"json_data">>,jiffy:decode(Payload)}] ++ Metadata
+        ] ++ [{<<"json_data">>, p_decode(Payload)}] ++ Metadata
         }),
 
         JSON
@@ -353,3 +353,8 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
    end.
 
 
+p_decode(Payload) when is_binary(Payload) ->
+    jiffy:decode(Payload);
+
+p_decode(_) ->
+   <<"">>.
