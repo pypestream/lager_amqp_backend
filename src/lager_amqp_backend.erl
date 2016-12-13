@@ -295,9 +295,10 @@ routing_key(Node, Name, Level) ->
 
 
 encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severity, Date, Time, Message, Metadata) ->
+    Payload0  = proplists:get_value(<<"amqp.payload">>, Metadata),
     try
         %DateTime = io_lib:format("~sT~s", [Date,Time]),
-         Payload0  = proplists:get_value(<<"amqp.payload">>, Metadata),
+
          Encoded = proplists:get_value(<<"encoded">>, Metadata),
 
          Metadata1 = proplists:delete(<<"amqp.payload">>, Metadata),
@@ -355,7 +356,7 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
     %DateTime = io_lib:format("~sT~s", [Date,Time]),
     Payload = proplists:get_value(payload,Metadata),
     PayloadJSON = jiffy:encode(Payload),
-    PayloadBin = tcl_tools:binarize(lager_trunc_io:format("~p~n", [binary_to_term(Message)], ?DEFAULT_TRUNCATION)),
+    PayloadBin = lists:flatten(lager_trunc_io:format("~p~n", [Message], ?DEFAULT_TRUNCATION)),
 
     jiffy:encode({[
         {<<"lager">>,
