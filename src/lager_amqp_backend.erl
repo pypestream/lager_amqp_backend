@@ -298,7 +298,6 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
     try
         %DateTime = io_lib:format("~sT~s", [Date,Time]),
          Payload0  = proplists:get_value(<<"amqp.payload">>, Metadata),
-         io:format("_Payload:~p~n",[Payload0]),
          Encoded = proplists:get_value(<<"encoded">>, Metadata),
 
          Metadata1 = proplists:delete(<<"amqp.payload">>, Metadata),
@@ -308,9 +307,8 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
                  <<"false">> ->
                      case catch shared_json:to_json(binary_to_term(Payload0)) of
                          Payload1 when is_binary(Payload1) -> p_decode(Payload1);
-                         Test ->
+                         _ ->
                              % TODO  log these as text
-                             io:format("Test:~p~n",[Test]),
                               PayloadBin = tcl_tools:binarize(lager_trunc_io:format("~p~n", [binary_to_term(Payload0)], ?DEFAULT_TRUNCATION))
 
                      end ;
@@ -326,7 +324,7 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
 %%                 _ -> Payload0
 %%             end,
 
-        io:format("Payload:~p~n",[Payload]),
+
         JSON =
         jiffy:encode( {[
             {<<"json">>,
@@ -348,7 +346,7 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
     catch
         Error ->
             Stacktrace = erlang:get_stacktrace(),
-            io:format("Stacktrace:~p~n",[Stacktrace])
+            erlang:error(badarg, [Payload0])
     end;
 
 
@@ -357,6 +355,7 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
     %DateTime = io_lib:format("~sT~s", [Date,Time]),
     Payload = proplists:get_value(payload,Metadata),
     PayloadJSON = jiffy:encode(Payload),
+    PayloadBin = tcl_tools:binarize(lager_trunc_io:format("~p~n", [binary_to_term(Message)], ?DEFAULT_TRUNCATION)),
 
     jiffy:encode({[
         {<<"lager">>,
@@ -366,7 +365,7 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
                 {<<"role_version">>, tcl_tools:binarize([Node_Version])},
                 {<<"node">>,tcl_tools:binarize([Node])}
             ] ++
-               [{log_text, tcl_tools:binarize([Message])}]
+               [{log_text,PayloadBin}]
             }
         },
         %{<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
@@ -377,7 +376,7 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
    catch
        Error ->
            Stacktrace = erlang:get_stacktrace(),
-           io:format("Stacktrace:~p~n",[Stacktrace])
+           erlang:error(badarg, [Message])
    end.
 
 
