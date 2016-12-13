@@ -36,7 +36,7 @@
                  routing_key }).
 
 
-
+-define(DEFAULT_TRUNCATION, 4096).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -297,8 +297,36 @@ routing_key(Node, Name, Level) ->
 encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severity, Date, Time, Message, Metadata) ->
     try
         %DateTime = io_lib:format("~sT~s", [Date,Time]),
-         Payload  = proplists:get_value(<<"amqp.payload">>, Metadata),
+         Payload0  = proplists:get_value(<<"amqp.payload">>, Metadata),
+         io:format("_Payload:~p~n",[Payload0]),
+         Encoded = proplists:get_value(<<"encoded">>, Metadata),
 
+         Metadata1 = proplists:delete(<<"amqp.payload">>, Metadata),
+
+         Payload =
+             case Encoded of
+                 <<"false">> ->
+                     case catch shared_json:to_json(binary_to_term(Payload0)) of
+                         Payload1 when is_binary(Payload1) -> p_decode(Payload1);
+                         Test ->
+                             % TODO  log these as text
+                             io:format("Test:~p~n",[Test]),
+                              PayloadBin = tcl_tools:binarize(lager_trunc_io:format("~p~n", [binary_to_term(Payload0)], ?DEFAULT_TRUNCATION))
+
+                     end ;
+
+                 _ -> p_decode(Payload0)
+             end,
+%%             case Encoded of
+%%                 false ->
+%%                     case catch shared_json:to_json(binary_to_term(Payload0)) of
+%%                         Payload1 when is_binary(Payload1) -> jiffy:encode(Payload1);
+%%                         _ -> <<"">>
+%%                     end;
+%%                 _ -> Payload0
+%%             end,
+
+        io:format("Payload:~p~n",[Payload]),
         JSON =
         jiffy:encode( {[
             {<<"json">>,
@@ -312,7 +340,7 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
             },
             %{<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
             {<<"type">>, <<"erlang-json">>}
-        ] ++ [{<<"json_data">>, p_decode(Payload)}] ++ Metadata
+        ] ++ [{<<"json_data">>, Payload}] ++ Metadata1
         }),
 
         JSON
