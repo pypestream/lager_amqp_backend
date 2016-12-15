@@ -147,6 +147,7 @@ handle_event({log,  Message}, #state{routing_key = RoutingKey, level = L } = Sta
             Meta = lager_msg:metadata(Message),
             Metadata2 = [ { tcl_tools:binarize([K]), tcl_tools:binarize([V])}  ||{K,V} <- Meta ],
             ContentType = proplists:get_value('amqp.content_type', Meta),
+
             {ok, log(Metadata2,
                      ContentType,
                      State,
@@ -356,7 +357,6 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
     %DateTime = io_lib:format("~sT~s", [Date,Time]),
     Payload = proplists:get_value(payload,Metadata),
     PayloadJSON = jiffy:encode(Payload),
-    PayloadBin = lists:flatten(lager_trunc_io:format("~p~n", [Message], ?DEFAULT_TRUNCATION)),
 
     jiffy:encode({[
         {<<"lager">>,
@@ -366,7 +366,7 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
                 {<<"role_version">>, tcl_tools:binarize([Node_Version])},
                 {<<"node">>,tcl_tools:binarize([Node])}
             ] ++
-               [{log_text,PayloadBin}]
+               [{log_text,tcl_tools:binarize([Message])}]
             }
         },
         %{<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
