@@ -298,7 +298,7 @@ routing_key(Node, Name, Level) ->
 encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severity, Date, Time, Message, Metadata) ->
     Payload0  = proplists:get_value(<<"amqp.payload">>, Metadata),
     try
-        %DateTime = io_lib:format("~sT~s", [Date,Time]),
+        DateTime = io_lib:format("~sT~s", [Date,Time]),
 
          Encoded = proplists:get_value(<<"encoded">>, Metadata),
 
@@ -317,15 +317,6 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
 
                  _ -> p_decode(Payload0)
              end,
-%%             case Encoded of
-%%                 false ->
-%%                     case catch shared_json:to_json(binary_to_term(Payload0)) of
-%%                         Payload1 when is_binary(Payload1) -> jiffy:encode(Payload1);
-%%                         _ -> <<"">>
-%%                     end;
-%%                 _ -> Payload0
-%%             end,
-
 
         JSON =
         jiffy:encode( {[
@@ -338,7 +329,7 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
                 ]
                 }
             },
-            %{<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
+            {<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
             {<<"type">>, <<"erlang-json">>}
         ] ++ [{<<"json_data">>, Payload}] ++ Metadata1
         }),
@@ -354,7 +345,7 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
 
 encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Message, Metadata) ->
    try
-    %DateTime = io_lib:format("~sT~s", [Date,Time]),
+    DateTime = io_lib:format("~sT~s", [Date,Time]),
     Payload = proplists:get_value(payload,Metadata),
     PayloadJSON = jiffy:encode(Payload),
 
@@ -369,14 +360,14 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
                [{log_text,tcl_tools:binarize([Message])}]
             }
         },
-        %{<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
+        {<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
         {<<"type">>, <<"erlang-logs">>}
     ] ++ Metadata ++ [{<<"payload">>,PayloadJSON}]
     })
 
    catch
-       Error ->
-           Stacktrace = erlang:get_stacktrace(),
+       _Error ->
+           %Stacktrace = erlang:get_stacktrace(),
            erlang:error(badarg, [Message])
    end.
 
