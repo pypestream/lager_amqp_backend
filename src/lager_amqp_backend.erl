@@ -328,7 +328,7 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
                 ]
                 }
             },
-            {<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
+            {<<"lager_timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
             {<<"type">>, <<"erlang-json">>}
         ] ++ [{<<"json_data">>, Payload}] ++ Metadata1
         }),
@@ -361,7 +361,7 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
                [{log_text, FormattedMsg}]
             }
         },
-        {<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
+        {<<"lager_timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
         {<<"type">>, <<"erlang-logs">>}
     ] ++ Metadata ++ [{<<"payload">>,PayloadJSON}]
     })
