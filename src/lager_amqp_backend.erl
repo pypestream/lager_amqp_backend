@@ -153,7 +153,7 @@ handle_event({log,  Message}, #state{routing_key = RoutingKey, level = L } = Sta
                      State,
                      lager_msg:datetime(Message),
                      lager_msg:severity_as_int(Message),
-                     lager_msg:message(Message))};
+                     Message)};
         false ->
             {ok, State}
     end;
@@ -311,8 +311,7 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
                          Payload1 when is_binary(Payload1) -> p_decode(Payload1);
                          _ ->
                              % TODO  log these as text
-                              PayloadBin = tcl_tools:binarize(lager_trunc_io:format("~p~n", [binary_to_term(Payload0)], ?DEFAULT_TRUNCATION))
-
+                              PayloadBin = tcl_tools:binarize(lager_default_formatter:format(Message,[]))
                      end ;
 
                  _ -> p_decode(Payload0)
@@ -346,6 +345,8 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
 encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Message, Metadata) ->
    try
     DateTime = io_lib:format("~sT~s", [Date,Time]),
+
+    FormattedMsg = tcl_tools:binarize(lager_default_formatter:format(Message,[])),
     Payload = proplists:get_value(payload,Metadata),
     PayloadJSON = jiffy:encode(Payload),
 
@@ -357,7 +358,7 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
                 {<<"role_version">>, tcl_tools:binarize([Node_Version])},
                 {<<"node">>,tcl_tools:binarize([Node])}
             ] ++
-               [{log_text,tcl_tools:binarize([Message])}]
+               [{log_text, FormattedMsg}]
             }
         },
         {<<"@timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
