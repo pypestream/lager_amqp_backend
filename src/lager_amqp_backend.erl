@@ -146,7 +146,7 @@ handle_event({log,  Message}, #state{routing_key = RoutingKey, level = L } = Sta
             Meta = lager_msg:metadata(Message),
             try
 
-            Metadata2 = [ { tcl_tools:binarize([K]), tcl_tools:binarize([V])}  ||{K,V} <- Meta,  is_list(V) orelse is_binary(V) ],
+            Metadata2 = [ { tcl_tools:binarize([K]), tcl_tools:binarize([V])}  ||{K,V} <- Meta,  K /= 'amqp.payload' ],
             ContentType = proplists:get_value('amqp.content_type', Meta),
 
             {ok, log(Metadata2,
@@ -311,14 +311,14 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
          Metadata1 = proplists:delete(<<"amqp.payload">>, Metadata),
 
          Payload =
-             case Encoded of
-                 <<"false">> ->
+             case tcl_tools:binarize([Encoded]) of
+                 <<"false">>  ->
                      case catch shared_json:to_json(binary_to_term(Payload0)) of
                          Payload1 when is_binary(Payload1) -> p_decode(Payload1);
                          _ ->
                              % TODO  log these as text
                               PayloadBin = tcl_tools:binarize(lager_default_formatter:format(Message,[]))
-                     end ;
+                     end;
 
                  _ -> p_decode(Payload0)
              end,
@@ -344,6 +344,7 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
     catch
         _Error ->
             _Stacktrace = erlang:get_stacktrace(),
+            %io:format("stacktrace:~p~n",[_Stacktrace]),
             erlang:error(badarg, [Payload0])
     end;
 
