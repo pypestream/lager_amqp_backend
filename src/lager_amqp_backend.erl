@@ -146,7 +146,8 @@ handle_event({log,  Message}, #state{routing_key = RoutingKey, level = L } = Sta
             Meta = lager_msg:metadata(Message),
             try
 
-            Metadata2 = [ { tcl_tools:binarize([K]), tcl_tools:binarize([V])}  ||{K,V} <- Meta,  K /= 'amqp.payload' ],
+                Payload = proplists:get_value('amqp.payload', Meta),
+                Metadata2 = [ {<<"amqp.payload">>, Payload }| [ { tcl_tools:binarize([K]), tcl_tools:binarize([V])}  ||{K,V} <- Meta,  K /= 'amqp.payload' ]],
             ContentType = proplists:get_value('amqp.content_type', Meta),
 
             {ok, log(Metadata2,
@@ -310,6 +311,7 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
 
          Metadata1 = proplists:delete(<<"amqp.payload">>, Metadata),
 
+
          Payload =
              case tcl_tools:binarize([Encoded]) of
                  <<"false">>  ->
@@ -338,6 +340,7 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
             {<<"type">>, <<"erlang-json">>}
         ] ++ [{<<"json_data">>, Payload}] ++ Metadata1
         }),
+
 
         JSON
 
