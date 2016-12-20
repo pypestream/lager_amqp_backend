@@ -143,9 +143,10 @@ handle_event({log,  Message}, #state{routing_key = RoutingKey, level = L } = Sta
 
     case lager_util:is_loggable(Message, L, {lager_amqp_backend, RoutingKey}) of
         true ->
-
             Meta = lager_msg:metadata(Message),
-            Metadata2 = [ { tcl_tools:binarize([K]), tcl_tools:binarize([V])}  ||{K,V} <- Meta ],
+            try
+
+            Metadata2 = [ { tcl_tools:binarize([K]), tcl_tools:binarize([V])}  ||{K,V} <- Meta,  is_list(V) orelse is_binary(V) ],
             ContentType = proplists:get_value('amqp.content_type', Meta),
 
             {ok, log(Metadata2,
@@ -153,7 +154,12 @@ handle_event({log,  Message}, #state{routing_key = RoutingKey, level = L } = Sta
                      State,
                      lager_msg:datetime(Message),
                      lager_msg:severity_as_int(Message),
-                     Message)};
+                     Message)}
+            catch
+                _Error ->
+                    erlang:error(badarg, [Meta])
+            end;
+
         false ->
             {ok, State}
     end;
@@ -336,8 +342,8 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
         JSON
 
     catch
-        Error ->
-            Stacktrace = erlang:get_stacktrace(),
+        _Error ->
+            _Stacktrace = erlang:get_stacktrace(),
             erlang:error(badarg, [Payload0])
     end;
 
