@@ -316,13 +316,13 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
              case tcl_tools:binarize([Encoded]) of
                  <<"false">>  ->
                      case catch shared_json:to_json(binary_to_term(Payload0)) of
-                         Payload1 when is_binary(Payload1) -> p_decode(Payload1);
+                         Payload1 when is_binary(Payload1) -> {<<"json_data">>, p_decode(Payload1) };
                          _ ->
                              % TODO  log these as text
-                             PayloadBin = [tcl_tools:binarize(lager_default_formatter:format(Message,[]))]
+                             PayloadBin =  {<<"json_data2">>, [tcl_tools:binarize(lager_default_formatter:format(Message,[]))]}
                      end;
 
-                 _ -> p_decode(Payload0)
+                 _ ->  {<<"json_data">>, p_decode(Payload0)}
              end,
         
         JSON =
@@ -338,7 +338,7 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
             },
             {<<"lager_timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
             {<<"type">>, <<"erlang-json">>}
-        ] ++ [{<<"json_data">>, Payload}] ++ Metadata1
+        ] ++ [Payload] ++ Metadata1
         }),
 
 
