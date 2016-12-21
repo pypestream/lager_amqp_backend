@@ -357,8 +357,6 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
     DateTime = io_lib:format("~sT~s", [Date,Time]),
 
     FormattedMsg = tcl_tools:binarize(lager_default_formatter:format(Message,[])),
-    Payload = proplists:get_value(payload,Metadata),
-    PayloadJSON = jiffy:encode(Payload),
 
     jiffy:encode({[
         {<<"lager">>,
@@ -373,7 +371,7 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
         },
         {<<"lager_timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
         {<<"type">>, <<"erlang-logs">>}
-    ] ++ Metadata ++ [{<<"payload">>,PayloadJSON}]
+    ] ++ Metadata 
     })
 
    catch
