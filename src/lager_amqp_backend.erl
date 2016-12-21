@@ -319,7 +319,7 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
                          Payload1 when is_binary(Payload1) -> p_decode(Payload1);
                          _ ->
                              % TODO  log these as text
-                              PayloadBin = {[<<"json_log">>, tcl_tools:binarize(lager_default_formatter:format(Message,[]))]}
+                             PayloadBin = [{<<"json_log">>, tcl_tools:binarize(lager_default_formatter:format(Message,[]))}]
                      end;
 
                  _ -> p_decode(Payload0)
