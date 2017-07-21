@@ -327,16 +327,12 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
              end,
         
         JSON =
-        jiffy:encode( {[
-
-                    {<<"lager_level">>, tcl_tools:binarize([Severity])},
-                    {<<"lager_role">>, tcl_tools:binarize([Node_Role])},
-                    {<<"lager_version">>, tcl_tools:binarize([Node_Version])},
-                    {<<"lager_node">>,tcl_tools:binarize([Node])},
-
-            {<<"lager_timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
-            {<<"type">>, <<"erlang-json">>}
-        ] ++ [Payload] ++ Metadata1
+        jiffy:encode( {
+        [ {<<"level">>, tcl_tools:binarize([Severity])},
+            {<<"node">>,tcl_tools:binarize([Node])},
+            {<<"type">>, <<"erlang-json">>},
+            {<<"lager_timestamp">>, tcl_tools:binarize([DateTime])}
+            , Payload| Metadata]
         }),
 
 
@@ -357,22 +353,17 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
     Config =  [message],
     FormattedMsg = tcl_tools:binarize(lager_default_formatter:format(Message,Config)),
 
+    Log = {
 
-    Log = {[
+     [
+         {<<"level">>, tcl_tools:binarize([Severity])},
+         {<<"node">>,tcl_tools:binarize([Node])},
 
-
-        {<<"lager_level">>, tcl_tools:binarize([Severity])},
-        {<<"lager_role">>, tcl_tools:binarize([Node_Role])},
-        {<<"lager_role_version">>, tcl_tools:binarize([Node_Version])},
-        {<<"lager_node">>,tcl_tools:binarize([Node])},
-        {<<"message">>,  FormattedMsg},
-
+     {<<"message">>,  FormattedMsg},
         {<<"lager_timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
         {<<"type">>, <<"erlang-logs">>}
-    ] ++ Metadata
+     |Metadata]
     },
-
-    error_logger:info_msg("Log:~p~n",[Log]),
     jiffy:encode(Log)
 
    catch
