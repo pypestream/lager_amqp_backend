@@ -126,7 +126,6 @@ init(Params) when is_list(Params) ->
 
 
 
-
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
@@ -328,12 +327,15 @@ encode_json_event(<<"application/json">>, Node, Node_Role, Node_Version, Severit
         
         JSON =
         jiffy:encode( {[
-
-                    {<<"lager_level">>, tcl_tools:binarize([Severity])},
-                    {<<"lager_role">>, tcl_tools:binarize([Node_Role])},
-                    {<<"lager_version">>, tcl_tools:binarize([Node_Version])},
-                    {<<"lager_node">>,tcl_tools:binarize([Node])},
-
+            {<<"json">>,
+                {[
+                    {<<"level">>, tcl_tools:binarize([Severity])},
+                    {<<"role">>, tcl_tools:binarize([Node_Role])},
+                    {<<"role_version">>, tcl_tools:binarize([Node_Version])},
+                    {<<"node">>,tcl_tools:binarize([Node])}
+                ]
+                }
+            },
             {<<"lager_timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
             {<<"type">>, <<"erlang-json">>}
         ] ++ [Payload] ++ Metadata1
@@ -354,26 +356,23 @@ encode_json_event(_, Node, Node_Role, Node_Version, Severity, Date, Time, Messag
    try
     DateTime = io_lib:format("~sT~s", [Date,Time]),
 
-    Config =  [message],
-    FormattedMsg = tcl_tools:binarize(lager_default_formatter:format(Message,Config)),
+    FormattedMsg = tcl_tools:binarize(lager_default_formatter:format(Message,[])),
 
-
-    Log = {[
-
-
-        {<<"lager_level">>, tcl_tools:binarize([Severity])},
-        {<<"lager_role">>, tcl_tools:binarize([Node_Role])},
-        {<<"lager_role_version">>, tcl_tools:binarize([Node_Version])},
-        {<<"lager_node">>,tcl_tools:binarize([Node])},
-        {<<"message">>,  FormattedMsg},
-
+    jiffy:encode({[
+        {<<"lager">>,
+            {[
+                {<<"level">>, tcl_tools:binarize([Severity])},
+                {<<"role">>, tcl_tools:binarize([Node_Role])},
+                {<<"role_version">>, tcl_tools:binarize([Node_Version])},
+                {<<"node">>,tcl_tools:binarize([Node])}
+            ] ++
+               [{log_text, FormattedMsg}]
+            }
+        },
         {<<"lager_timestamp">>, tcl_tools:binarize([DateTime])}, %% use the logstash timestamp
         {<<"type">>, <<"erlang-logs">>}
     ] ++ Metadata
-    },
-
-    error_logger:info_msg("Log:~p~n",[Log]),
-    jiffy:encode(Log)
+    })
 
    catch
        _Error ->
