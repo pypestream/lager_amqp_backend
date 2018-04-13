@@ -5,16 +5,9 @@
   {applications, [
     kernel,
     stdlib,
-    lager
+    lager,
+    amqp_client
   ]},
-  {env, [
-         {name,           "lager_amqp_backend"},
-         {level,          debug},
-         {exchange,       <<"lager_amqp_backend">>},
-         {amqp_user,      <<"guest">>},
-         {amqp_pass,      <<"guest">>},
-         {amqp_vhost,     <<"/">>},
-         {amqp_host,      "localhost"},
-         {amqp_port,      5672}
-        ]}
+  {mod, { lager_amqp_backend_app, []}},
+  {env, []}
 ]}.
